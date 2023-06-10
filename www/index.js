@@ -1,73 +1,118 @@
-import { TinyModel, SmallModel, MediumModel } from "thermo-online";
+import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies } from "thermo-online";
 import { memory } from "thermo-online/thermo_online_bg";
+import Plotly from 'plotly.js-dist-min';
 
-const CELL_SIZE = 5;
-const TEMP_STEPS = 50;
-const START_TEMP = 1.0;
-const E_STEPS = 100;
-const M_STEPS = 100;
-const N_FRAMES = 3;
+let tempSteps = 10;
+let startTemp = 8.0;
+let eSteps = 100;
+let mSteps = 100;
+let nFrames = 10;
 
-const model = TinyModel.new([-1.0, 1.0, 1.0, 1.0], 1.0, 1.0, "move_vacancy", TEMP_STEPS * N_FRAMES, TEMP_STEPS);
-const width = model.width();
-const height = model.height();
-
-const canvas = document.getElementById("main_animation");
-canvas.height = CELL_SIZE * height;
-canvas.width = CELL_SIZE * width;
-const ctx = canvas.getContext('2d');
+const PROGRESS_DIV = '<div id="running"><div id="progressBar"><div id="progress"></div></div></div>'
+const OUTPUT_DIV = '<div id="modelOutput"><img id="animation" /><div id="energyTemp"></div><div id="capacityTemp"></div></div>'
 
 
-const getIndex = (row, column) => {
-    return row * width + column;
-};
+const energies = make_energies(-0.75, -0.25, -0.75);
 
-const drawGrid = (array) => {
-    ctx.beginPath();
+let Model;
 
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col)
-            ctx.fillStyle = array[idx] === 0 ? "orange" : "red"
+const COLOR_1 = get_color(0);
+const COLOR_2 = get_color(1);
+const COLOR_3 = get_color(2);
 
-            ctx.fillRect(
-                col * CELL_SIZE,
-                row * CELL_SIZE,
-                CELL_SIZE,
-                CELL_SIZE,
-            );
-        }
+function runSimulation() {
+    let method = document.getElementById('method').value;
+    tempSteps = parseInt(document.getElementById('tempSteps').value);
+    startTemp = parseFloat(document.getElementById('startTemp').value);
+    eSteps = parseInt(document.getElementById('eSteps').value);
+    mSteps = parseInt(document.getElementById('mSteps').value);
+    nFrames = parseInt(document.getElementById('nFrames').value);
+
+
+    switch (parseInt(document.getElementById('modelSize').value)) {
+        case 32:
+            Model = SmallModel;
+            break;
+        case 64:
+            Model = MediumModel;
+            break;
+        case 128:
+            Model = BigModel;
+            break;
+        case 256:
+            Model = XBigModel;
+            break;
+        default:
+            console.log("failed to assign model");
+            console.log(modelSize);
     }
-    ctx.stroke()
+
+    const model = Model.new(energies, 1.0, 1.0, method, tempSteps * nFrames, tempSteps);
+
+    document.body.innerHTML += PROGRESS_DIV;
+
+    let progressBar = document.getElementById("progress").style;
+    console.log(progressBar)
+    progressBar.height = "30px";
+
+    for (let i = 0; i < tempSteps; i++) {
+        const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1))
+        model.run_at_temp(eSteps, mSteps, temp, nFrames)
+        console.log(temp)
+        console.log(i)
+        progressBar.width = i / (tempSteps - 1) * 100 + "%"
+        progressBar.innerHTML = (i + 1) + " / " + tempSteps;
+    }
+    document.getElementById("running").remove()
+
+
+    document.body.innerHTML += OUTPUT_DIV;
+
+    const gifLen = model.gif_len();
+    const gifPtr = model.gif_ptr();
+
+    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen)
+    let blob = new Blob([gifData], { type: 'image/gif' })
+    let url = URL.createObjectURL(blob)
+
+
+    let img = document.getElementById("animation");
+    img.src = url;
+
+    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len())
+    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len())
+    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len())
+
+    // plot temp energy
+    const trace1 = {
+        x: temp,
+        y: energy,
+    };
+    const layout1 = {
+        xaxis: {
+            title: 'Temperature',
+        },
+        yaxis: {
+            title: 'Energy',
+        },
+    };
+    Plotly.newPlot('energyTemp', [trace1], layout1);
+
+    // plot temp energy
+    const trace2 = {
+        x: temp,
+        y: heat_capacity,
+    };
+    const layout2 = {
+        xaxis: {
+            title: 'Temperature',
+        },
+        yaxis: {
+            title: 'Heat Capacity',
+        },
+    };
+    Plotly.newPlot('capacityTemp', [trace2], layout2);
+
 }
 
-var temp_step = TEMP_STEPS;
-const coolingLoop = () => {
-    temp_step -= 1
-    const temp = START_TEMP * (temp_step / (TEMP_STEPS - 1))
-    model.run_at_temp(E_STEPS, M_STEPS, temp, 1)
-    const frame = new Uint8Array(memory.buffer, model.anim_start_ptr(), width * height);
-    console.log(temp)
-    console.log(temp_step)
-    drawGrid(frame)
-    if (temp_step === 0) {
-        return;
-    }
-    requestAnimationFrame(coolingLoop)
-}
-
-var currentFrame = 0;
-const renderLoop = () => {
-    {
-        let animation = new Uint8Array(memory.buffer, model.anim_frame_ptr(currentFrame), width * height);
-        drawGrid(animation)
-        currentFrame = (currentFrame + 1) % animationLen
-    }
-    requestAnimationFrame(renderLoop);
-}
-
-
-coolingLoop()
-const animationLen = model.anim_len();
-
-renderLoop()
+window.runSimulation = runSimulation

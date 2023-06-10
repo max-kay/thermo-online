@@ -1,0 +1,120 @@
+/* Reset default browser styles */
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Set a dark background color for the page */
+body {
+    background-color: #333;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+}
+
+/* Center the content on the page */
+#top {
+    display: flex;
+    justify-content: space-between;
+    max-width: 100%;
+    margin: 0px;
+    padding: 0px;
+}
+
+#titles,
+#modelSelection,
+#progressBar,
+#modelOutput {
+    /* max-width: 600px; */
+    margin: 20px;
+    padding: 20px;
+    background-color: #444;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+/* Style the main heading */
+#titles h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+/* Style the paragraphs */
+#titles p {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+/* Style the author name */
+#author {
+    font-size: 14px;
+    color: #999;
+}
+
+/* Style the form elements */
+#modelSelection label {
+    display: block;
+    margin-top: 10px;
+}
+
+#modelSelection select,
+#modelSelection input[type="number"] {
+    display: block;
+    margin-top: 5px;
+    padding: 5px;
+    font-size: 14px;
+    background-color: #555;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#modelSelection button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Style the progress bar */
+#progressBar {
+    height: 10px;
+    background-color: #555;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+#progress {
+    height: 100%;
+    background-color: #4CAF50;
+}
+
+/* Style the model output */
+#modelOutput {
+    margin-top: 20px;
+}
+
+#animation {
+    max-width: 100%;
+    margin-bottom: 10px;
+    image-rendering: pixelated;
+}
+
+#energyTemp,
+#capacityTemp {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+/* Hide the noscript message */
+noscript {
+    display: none;
+}
