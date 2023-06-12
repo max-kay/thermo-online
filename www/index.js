@@ -174,5 +174,22 @@ function runSimulation() {
     animateSimulation(0)
 }
 
+function getZip() {
+    model.make_zip();
+    const ptr = model.get_zip_ptr();
+    const len = model.get_zip_len();
+    const zipData = new Uint8Array(memory.buffer, ptr, len);
+    const blob = new Blob([zipData], { type: 'applications/zip' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "thermodynamic_model.zip";
+    link.click();
+
+    URL.revokeObjectURL(url)
+    model.destory_zip_data()
+}
+
 
 window.runSimulation = runSimulation;
+window.getZip = getZip
