@@ -1,5 +1,7 @@
 use phases::{Array2d, NumAtom, NumC, System};
+use std::io::{Cursor, Write};
 use wasm_bindgen::prelude::*;
+use zip::write::{FileOptions, ZipWriter};
 mod utils;
 
 #[wasm_bindgen]
@@ -50,6 +52,7 @@ macro_rules! makemodel {
             int_energy: Vec<f32>,
             heat_capacity: Vec<f32>,
             acceptance_rate: Vec<f32>,
+            zip_data: Option<Vec<u8>>,
         }
 
         #[wasm_bindgen]
@@ -88,6 +91,7 @@ macro_rules! makemodel {
                     int_energy: Vec::with_capacity(log_capacity as usize),
                     heat_capacity: Vec::with_capacity(log_capacity as usize),
                     acceptance_rate: Vec::with_capacity(log_capacity as usize),
+                    zip_data: None,
                 }
             }
 
@@ -144,6 +148,33 @@ macro_rules! makemodel {
 
         #[wasm_bindgen]
         impl $name {
+            pub fn get_zip_ptr(&mut self) -> *const u8 {
+                let mut csv = Vec::new();
+                writeln!(csv, "This file was generated as output to Thermodynamic Models by Max Krummenacher (mkrummenache@student.ethz.ch)").unwrap();
+                writeln!(csv, "Temperature,Internal Energy,Heat Capacity,Acceptance Rate").unwrap();
+                for i in 0..self.int_energy.len(){
+                    writeln!(csv, "{},{},{},{}", self.temp[i], self.int_energy[i], self.heat_capacity[i], self.acceptance_rate[i]).unwrap()
+                }
+                let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+                let options = FileOptions::default()
+                                    .compression_method(zip::CompressionMethod::Deflated)
+                                    .unix_permissions(0o755);
+                zip.start_file("animation.gif", options).unwrap();
+                zip.write_all(&self.encoder.get_ref()).unwrap();
+                zip.start_file("model_output.csv", options).unwrap();
+                zip.write_all(&csv).unwrap();
+                zip.finish().unwrap();
+                self.zip_data = Some(zip.finish().unwrap().into_inner());
+                self.zip_data.as_ref().unwrap().as_ptr()
+            }
+
+            pub fn destory_zip_data(&mut self) {
+                self.zip_data = None;
+            }
+        }
+
+        #[wasm_bindgen]
+        impl $name {
             pub fn width(&self) -> u32 {
                 $size
             }
@@ -159,10 +190,6 @@ macro_rules! makemodel {
             pub fn gif_ptr(&self) -> *const u8 {
                 self.encoder.get_ref().as_ptr()
             }
-
-            // pub fn current_state_ptr(&self) -> *const u8 {
-            //     self.system.lattice[0].as_ptr().cast()
-            // }
         }
     };
 }
