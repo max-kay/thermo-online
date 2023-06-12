@@ -10,12 +10,13 @@ extern "C" {
 const PALETTE: &[u8] = phases::anim::PALETTE;
 
 #[wasm_bindgen]
-pub fn get_color(num: u8) -> Vec<u8> {
-    vec![
+pub fn get_color(num: u8) -> String {
+    format!(
+        "rgb({}, {}, {})",
         PALETTE[3 * num as usize],
         PALETTE[(3 * num + 1) as usize],
         PALETTE[(3 * num + 2) as usize],
-    ]
+    )
 }
 
 #[allow(unused)]
@@ -43,6 +44,8 @@ macro_rules! makemodel {
             temp: Vec<f32>,
             int_energy: Vec<f32>,
             heat_capacity: Vec<f32>,
+            acceptance_rate: Vec<f32>,
+            first_frame_present: bool,
         }
 
         #[wasm_bindgen]
@@ -75,6 +78,8 @@ macro_rules! makemodel {
                     temp: Vec::with_capacity(log_capacity as usize),
                     int_energy: Vec::with_capacity(log_capacity as usize),
                     heat_capacity: Vec::with_capacity(log_capacity as usize),
+                    acceptance_rate: Vec::with_capacity(log_capacity as usize),
+                    first_frame_present: false,
                 }
             }
 
@@ -85,23 +90,35 @@ macro_rules! makemodel {
                 temp: f32,
                 frames: u32,
             ) {
+                if !self.first_frame_present {
+                    let frame = self.system.get_frame();
+                    self.encoder.write_frame(&frame).unwrap()
+                }
+                let tot_steps = measurement_steps * $size * $size;
                 self.temp.push(temp);
-
                 for _ in 0..equilibrium_steps * $size * $size {
                     (self.method)(&mut self.system, temp);
                 }
 
                 let mut stats = phases::StreamingVariance::new();
-                for k in 0..measurement_steps * $size * $size {
-                    (self.method)(&mut self.system, temp);
+                let mut accepted = 0;
+                for k in 0..tot_steps {
+                    accepted += (self.method)(&mut self.system, temp) as u32;
                     stats.add_value(self.system.internal_energy());
                     if k % (measurement_steps / frames) == 0 {
                         let frame = self.system.get_frame();
                         self.encoder.write_frame(&frame).unwrap()
                     }
                 }
-                self.int_energy.push(stats.avg());
-                self.heat_capacity.push(stats.variance() / temp / temp)
+                self.int_energy
+                    .push(stats.avg() / ($size as f32 * $size as f32));
+                self.heat_capacity.push(
+                    stats.variance()
+                        / (temp * temp)
+                        / ($size as f32 * $size as f32 * $size as f32 * $size as f32),
+                );
+                self.acceptance_rate
+                    .push(accepted as f32 / tot_steps as f32)
             }
         }
 
@@ -119,6 +136,9 @@ macro_rules! makemodel {
             }
             pub fn heat_capacity_ptr(&self) -> *const f32 {
                 self.heat_capacity.as_ptr()
+            }
+            pub fn acceptance_rate_ptr(&self) -> *const f32 {
+                self.acceptance_rate.as_ptr()
             }
         }
 
