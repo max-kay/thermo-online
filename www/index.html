@@ -17,36 +17,53 @@
                 An implementation of the simulation techniques discussed in the course on thermodynamics and phase
                 transitions. Bala aajj ajn ajne ujrubbue bsbe i os e fojbf.
             </p>
+            <p>
+                pL = per LatticeSite
+            </p>
             <a href="mailto:mkrummenache@student.ethz.ch" id="author">by Max Krummenacher</a>
         </div>
 
         <div id="modelSelection" class="boxed">
-            <label for="modelSize">Model Size</label>
-            <select id="modelSize">
-                <option value=32>32</option>
-                <option value=64>64</option>
-                <option value=128>128</option>
-                <option value=256>256</option>
-            </select><br>
+            <div class="cols">
+                <div class="col">
+                    <label for="modelSize">Model Size</label>
+                    <select id="modelSize">
+                        <option value=32>32</option>
+                        <option value=64>64</option>
+                        <option value=128>128</option>
+                        <option value=256>256</option>
+                    </select><br>
 
-            <label for="method">Method:</label>
-            <select id="method" name="method">
-                <option value="monte_carlo_swap">Swap</option>
-                <option value="move_vacancy">Move Vacancy</option>
-            </select><br>
+                    <label for="method">Method:</label>
+                    <select id="method" name="method">
+                        <option value="monte_carlo_swap">Swap</option>
+                        <option value="move_vacancy">Move Vacancy</option>
+                    </select><br>
+                    Ineraction Energies
+                    <label for="j"> A ↔ A</label>
+                    <input type="number" id="j00" value="-1.0"><br>
 
-            <label for="tempSteps">Temperature Steps:</label>
-            <input type="number" id="tempSteps" value="10"><br>
+                    <label for="j01"> A ↔ B</label>
+                    <input type="number" id="j01" value="-0.75"><br>
 
-            <label for="startTemp">Start Temperature:</label>
-            <input type="number" id="startTemp" value="8.0"><br>
+                    <label for="j11"> B ↔ B</label>
+                    <input type="number" id="j11" value="-1.0"><br>
 
-            <label for="eSteps">Steps for Equilibrium per Lattice Site:</label>
-            <input type="number" id="eSteps" value="100"><br>
+                </div>
+                <div class="col">
+                    <label for="tempSteps">Temperature Steps:</label>
+                    <input type="number" id="tempSteps" value="10"><br>
 
-            <label for="mSteps">Steps for Measurement per Lattice Site:</label>
-            <input type="number" id="mSteps" value="100"><br>
+                    <label for="startTemp">Start Temperature:</label>
+                    <input type="number" id="startTemp" value="8.0"><br>
 
+                    <label for="eSteps">Steps for Equilibrium pL:</label>
+                    <input type="number" id="eSteps" value="100"><br>
+
+                    <label for="mSteps">Steps for Measurement pL:</label>
+                    <input type="number" id="mSteps" value="100"><br>
+                </div>
+            </div>
             <button onclick="runSimulation()" id="run">Run</button>
         </div>
     </div>
@@ -56,9 +73,20 @@
         </div>
     </div>
     <div id="modelOutput" class="boxed">
-        <img id="animation" />
-        <div id="energyTemp"></div>
-        <div id="capacityTemp"></div>
+        <div id="animation">
+            <img id="animationGif" class="col" />
+            <ul id="legend" class="col" style="list-style: none; line-height: 1;">
+                <li><span class="color0"></span> Atom A </li>
+                <li><span class="color1"></span> Atom B </li>
+            </ul>
+        </div>
+        <div class="cols">
+            <div id="energyTemp" class="col"></div>
+            <div id="capacityTemp" class="col"></div>
+        </div>
+        <div class="cols">
+            <div id="acceptanceTemp" class="col"></div>
+        </div>
     </div>
     <script src="./bootstrap.js"></script>
 </body>

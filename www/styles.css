@@ -1,11 +1,9 @@
-/* Reset default browser styles */
 html,
 body {
     margin: 0;
     padding: 0;
 }
 
-/* Set a dark background color for the page */
 body {
     background-color: #333;
     color: #fff;
@@ -13,7 +11,6 @@ body {
     line-height: 1.5;
 }
 
-/* Center the content on the page */
 #top {
     display: flex;
     justify-content: center;
@@ -29,26 +26,32 @@ body {
     border-radius: 5px;
 }
 
-/* Style the main heading */
 #titles h1 {
     font-size: 40px;
     margin-bottom: 10px;
     margin-top: 0px;
 }
 
-/* Style the paragraphs */
 #titles p {
     font-size: 16px;
     margin-bottom: 10px;
 }
 
-/* Style the author name */
 #author {
     color: #999;
 }
 
 #modelSelection {
     width: 60vw;
+}
+
+.cols {
+    display: flex;
+}
+
+.col {
+    margin: 10px;
+    width: 50%;
 }
 
 
@@ -79,6 +82,7 @@ body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    width: 100%;
 }
 
 #modelSelection button:hover {
@@ -89,7 +93,6 @@ body {
     background-color: gray;
 }
 
-/* Style the progress bar */
 #running {
     display: none;
 }
@@ -107,25 +110,44 @@ body {
     background-color: #4CAF50;
 }
 
-/* Style the model output */
 #modelOutput {
-    margin-top: 20px;
     display: none;
 }
 
 #animation {
-    max-width: 100%;
-    margin-bottom: 10px;
+    display: flex;
+}
+#animationGif {
+    width: 50%;
     image-rendering: pixelated;
+}
+
+#legend ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 5px;
+    float: left;
+}
+
+#legend ul li {
+    font-size: 80%;
+    margin: 5px;
+    margin: 10px;
+    line-height: 18px;
+    margin-bottom: 2px;
+}
+
+#legend li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
 }
 
 #energyTemp,
 #capacityTemp {
     font-size: 16px;
     margin-bottom: 10px;
-}
-
-/* Hide the noscript message */
-noscript {
-    display: none;
 }

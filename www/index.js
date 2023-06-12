@@ -2,37 +2,65 @@ import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies 
 import { memory } from "thermo-online/thermo_online_bg";
 import Plotly from 'plotly.js-dist-min';
 
+const PLOTLY_LAYOUT = {
+    xaxis: {
+        color: '#FFFFFF',
+        tickfont: {
+            color: '#FFFFFF'
+        }
+    },
+    yaxis: {
+        color: '#FFFFFF',
+        tickfont: {
+            color: '#FFFFFF'
+        }
+    },
+    plot_bgcolor: '#555',
+    paper_bgcolor: '#444',
+    margin: {
+        l: 50,
+        r: 20,
+        t: 20,
+        b: 50,
+    },
+    padding: {
+        l: 10,
+        r: 10,
+        t: 10,
+        b: 10,
+    }
+};
+
 let tempSteps = 10;
 let startTemp = 8.0;
 let eSteps = 100;
 let mSteps = 100;
 let nFrames = 3;
-
-const energies = make_energies(-0.75, -0.25, -0.75);
+let method;
+let energies;
 
 let Model;
 let model;
 
-const COLOR_1 = get_color(0);
-const COLOR_2 = get_color(1);
-const COLOR_3 = get_color(2);
 
-window.addEventListener("beforeunload", function () { model = none })
+// update colors for legend
+document.styleSheets[0].insertRule(".color0{ background:" + get_color(0) + ";}")
+document.styleSheets[0].insertRule(".color1{ background:" + get_color(1) + ";}")
 
-function runSimulation() {
-    model = undefined;
-    document.getElementById("modelOutput").style.display = "none";
+// TODO check if this fixes memory leaks
+window.addEventListener("beforeunload", function () { model = undefined })
 
-    document.getElementById("run").disabled = true;
-
-    let method = document.getElementById('method').value;
+function readInputs() {
+    method = document.getElementById('method').value;
     tempSteps = parseInt(document.getElementById('tempSteps').value);
     startTemp = parseFloat(document.getElementById('startTemp').value);
     eSteps = parseInt(document.getElementById('eSteps').value);
     mSteps = parseInt(document.getElementById('mSteps').value);
-    // TODO figure out nFrame in code
-
-
+    energies = make_energies(
+        parseFloat(document.getElementById("j00").value),
+        parseFloat(document.getElementById("j01").value),
+        parseFloat(document.getElementById("j11").value),
+    )
     switch (parseInt(document.getElementById('modelSize').value)) {
         case 32:
             Model = SmallModel;
@@ -47,18 +75,44 @@ function runSimulation() {
             Model = XBigModel;
             break;
         default:
-            console.log("failed to assign model");
-            console.log(modelSize);
+            console.log("failed to assign model, using SmallModel");
+            console.log("modelSize: " + modelSize);
+            Model = SmallModel
     }
+}
+
+function plot(id, xs, ys, x_title, y_title) {
+    const trace1 = {
+        x: xs,
+        y: ys,
+    };
+
+    const l1 = {
+        ...PLOTLY_LAYOUT,
+        xaxis: {
+            ...PLOTLY_LAYOUT.xaxis,
+            title: x_title,
+        },
+        yaxis: {
+            ...PLOTLY_LAYOUT.yaxis,
+            title: y_title,
+        },
+    };
+    Plotly.newPlot(id, [trace1], l1);
+}
+
+function runSimulation() {
+    model = undefined;
+    console.log("started running");
+    document.getElementById("modelOutput").style.display = "none";
+    document.getElementById("run").disabled = true;
+    readInputs()
+
+    // TODO figure out nFrame in code
 
     model = Model.new(energies, 1.0, 1.0, method, tempSteps * nFrames, tempSteps);
 
-
-
     let progressBar = document.getElementById("progress").style;
-    console.log(progressBar);
-    progressBar.height = "30px";
-
     for (let i = 0; i < tempSteps; i++) {
         const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
         model.run_at_temp(eSteps, mSteps, temp, nFrames);
@@ -72,50 +126,25 @@ function runSimulation() {
     const gifLen = model.gif_len();
     const gifPtr = model.gif_ptr();
 
+    
+    document.getElementById("run").disabled = false;
+    document.getElementById("run").innerHTML = "Rerun"
+    document.getElementById("modelOutput").style.display = "block";
+    
     const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
     let blob = new Blob([gifData], { type: 'image/gif' });
     let url = URL.createObjectURL(blob);
-
-    document.getElementById("run").disabled = false;
-    document.getElementById("modelOutput").style.display = "block";
-
-    let img = document.getElementById("animation");
+    let img = document.getElementById("animationGif");
     img.src = url;
-
+    console.log(img);
     const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
     const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
     const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
+    const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
 
-    // plot temp energy
-    const trace1 = {
-        x: temp,
-        y: energy,
-    };
-    const layout1 = {
-        xaxis: {
-            title: 'Temperature',
-        },
-        yaxis: {
-            title: 'Energy',
-        },
-    };
-    Plotly.newPlot('energyTemp', [trace1], layout1);
-
-    // plot temp energy
-    const trace2 = {
-        x: temp,
-        y: heat_capacity,
-    };
-    const layout2 = {
-        xaxis: {
-            title: 'Temperature',
-        },
-        yaxis: {
-            title: 'Heat Capacity',
-        },
-    };
-    Plotly.newPlot('capacityTemp', [trace2], layout2);
-
+    plot("energyTemp", temp, energy, "Temperature", "Energy pL")
+    plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity")
+    plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate")
 }
 
 window.runSimulation = runSimulation;
