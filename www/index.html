@@ -11,16 +11,16 @@
     <noscript>This page contains webassembly and javascript content, please enable javascript in your
         browser.</noscript>
     <div id="top">
-        <div id="titles">
+        <div id="titles" class="boxed">
             <h1>Thermodynamic Models</h1>
             <p>
                 An implementation of the simulation techniques discussed in the course on thermodynamics and phase
-                transitions.
+                transitions. Bala aajj ajn ajne ujrubbue bsbe i os e fojbf.
             </p>
-            <p id="author">by Max Krummenacher</p>
+            <a href="mailto:mkrummenache@student.ethz.ch" id="author">by Max Krummenacher</a>
         </div>
 
-        <div id="modelSelection">
+        <div id="modelSelection" class="boxed">
             <label for="modelSize">Model Size</label>
             <select id="modelSize">
                 <option value=32>32</option>
@@ -47,11 +47,18 @@
             <label for="mSteps">Steps for Measurement per Lattice Site:</label>
             <input type="number" id="mSteps" value="100"><br>
 
-            <label for="nFrames">Number of Frames per Temperature:</label>
-            <input type="number" id="nFrames" value="10"><br>
-
-            <button onclick="runSimulation()">Run</button>
+            <button onclick="runSimulation()" id="run">Run</button>
         </div>
+    </div>
+    <div id="running" class="boxed">
+        <div id="progressBar">
+            <div id="progress"></div>
+        </div>
+    </div>
+    <div id="modelOutput" class="boxed">
+        <img id="animation" />
+        <div id="energyTemp"></div>
+        <div id="capacityTemp"></div>
     </div>
     <script src="./bootstrap.js"></script>
 </body>

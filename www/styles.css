@@ -16,17 +16,12 @@ body {
 /* Center the content on the page */
 #top {
     display: flex;
-    justify-content: space-between;
-    max-width: 100%;
+    justify-content: center;
     margin: 0px;
     padding: 0px;
 }
 
-#titles,
-#modelSelection,
-#progressBar,
-#modelOutput {
-    /* max-width: 600px; */
+.boxed {
     margin: 20px;
     padding: 20px;
     background-color: #444;
@@ -36,8 +31,9 @@ body {
 
 /* Style the main heading */
 #titles h1 {
-    font-size: 24px;
+    font-size: 40px;
     margin-bottom: 10px;
+    margin-top: 0px;
 }
 
 /* Style the paragraphs */
@@ -48,21 +44,23 @@ body {
 
 /* Style the author name */
 #author {
-    font-size: 14px;
     color: #999;
 }
 
-/* Style the form elements */
+#modelSelection {
+    width: 60vw;
+}
+
+
 #modelSelection label {
     display: block;
-    margin-top: 10px;
 }
 
 #modelSelection select,
 #modelSelection input[type="number"] {
     display: block;
-    margin-top: 5px;
-    padding: 5px;
+    margin-top: 4px;
+    padding: 4px;
     font-size: 14px;
     background-color: #555;
     color: #fff;
@@ -83,7 +81,19 @@ body {
     cursor: pointer;
 }
 
+#modelSelection button:hover {
+    background-color: #3f8f42;
+}
+
+#modelSelection button:disabled {
+    background-color: gray;
+}
+
 /* Style the progress bar */
+#running {
+    display: none;
+}
+
 #progressBar {
     height: 10px;
     background-color: #555;
@@ -100,6 +110,7 @@ body {
 /* Style the model output */
 #modelOutput {
     margin-top: 20px;
+    display: none;
 }
 
 #animation {

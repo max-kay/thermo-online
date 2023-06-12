@@ -6,27 +6,31 @@ let tempSteps = 10;
 let startTemp = 8.0;
 let eSteps = 100;
 let mSteps = 100;
-let nFrames = 10;
-
-const PROGRESS_DIV = '<div id="running"><div id="progressBar"><div id="progress"></div></div></div>'
-const OUTPUT_DIV = '<div id="modelOutput"><img id="animation" /><div id="energyTemp"></div><div id="capacityTemp"></div></div>'
-
+let nFrames = 3;
 
 const energies = make_energies(-0.75, -0.25, -0.75);
 
 let Model;
+let model;
 
 const COLOR_1 = get_color(0);
 const COLOR_2 = get_color(1);
 const COLOR_3 = get_color(2);
 
+window.addEventListener("beforeunload", function () { model = none })
+
 function runSimulation() {
+    model = undefined;
+    document.getElementById("modelOutput").style.display = "none";
+
+    document.getElementById("run").disabled = true;
+
     let method = document.getElementById('method').value;
     tempSteps = parseInt(document.getElementById('tempSteps').value);
     startTemp = parseFloat(document.getElementById('startTemp').value);
     eSteps = parseInt(document.getElementById('eSteps').value);
     mSteps = parseInt(document.getElementById('mSteps').value);
-    nFrames = parseInt(document.getElementById('nFrames').value);
+    // TODO figure out nFrame in code
 
 
     switch (parseInt(document.getElementById('modelSize').value)) {
@@ -47,41 +51,40 @@ function runSimulation() {
             console.log(modelSize);
     }
 
-    const model = Model.new(energies, 1.0, 1.0, method, tempSteps * nFrames, tempSteps);
+    model = Model.new(energies, 1.0, 1.0, method, tempSteps * nFrames, tempSteps);
 
-    document.body.innerHTML += PROGRESS_DIV;
+
 
     let progressBar = document.getElementById("progress").style;
-    console.log(progressBar)
+    console.log(progressBar);
     progressBar.height = "30px";
 
     for (let i = 0; i < tempSteps; i++) {
-        const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1))
-        model.run_at_temp(eSteps, mSteps, temp, nFrames)
-        console.log(temp)
-        console.log(i)
-        progressBar.width = i / (tempSteps - 1) * 100 + "%"
-        progressBar.innerHTML = (i + 1) + " / " + tempSteps;
+        const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
+        model.run_at_temp(eSteps, mSteps, temp, nFrames);
+        console.log(temp);
+        console.log(i);
+        progressBar.width = i / (tempSteps - 1) * 100 + "%";
+        progressBar.innerHTML = (i + 1) + " / " + tempSteps;;
     }
-    document.getElementById("running").remove()
 
-
-    document.body.innerHTML += OUTPUT_DIV;
 
     const gifLen = model.gif_len();
     const gifPtr = model.gif_ptr();
 
-    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen)
-    let blob = new Blob([gifData], { type: 'image/gif' })
-    let url = URL.createObjectURL(blob)
+    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
+    let blob = new Blob([gifData], { type: 'image/gif' });
+    let url = URL.createObjectURL(blob);
 
+    document.getElementById("run").disabled = false;
+    document.getElementById("modelOutput").style.display = "block";
 
     let img = document.getElementById("animation");
     img.src = url;
 
-    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len())
-    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len())
-    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len())
+    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
+    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
+    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
 
     // plot temp energy
     const trace1 = {
@@ -115,4 +118,4 @@ function runSimulation() {
 
 }
 
-window.runSimulation = runSimulation
+window.runSimulation = runSimulation;
