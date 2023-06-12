@@ -148,7 +148,7 @@ macro_rules! makemodel {
 
         #[wasm_bindgen]
         impl $name {
-            pub fn get_zip_ptr(&mut self) -> *const u8 {
+            pub fn make_zip(&mut self) {
                 let mut csv = Vec::new();
                 writeln!(csv, "This file was generated as output to Thermodynamic Models by Max Krummenacher (mkrummenache@student.ethz.ch)").unwrap();
                 writeln!(csv, "Temperature,Internal Energy,Heat Capacity,Acceptance Rate").unwrap();
@@ -165,7 +165,14 @@ macro_rules! makemodel {
                 zip.write_all(&csv).unwrap();
                 zip.finish().unwrap();
                 self.zip_data = Some(zip.finish().unwrap().into_inner());
+            }
+
+            pub fn get_zip_ptr(&self) -> *const u8 {
                 self.zip_data.as_ref().unwrap().as_ptr()
+            }
+
+            pub fn get_zip_len(&self) -> usize {
+                self.zip_data.as_ref().unwrap().len()
             }
 
             pub fn destory_zip_data(&mut self) {
@@ -198,4 +205,4 @@ makemodel!(XBigModel, 256);
 makemodel!(BigModel, 128);
 makemodel!(MediumModel, 64);
 makemodel!(SmallModel, 32);
-makemodel!(XSmallModel, 32);
+makemodel!(XSmallModel, 16);
