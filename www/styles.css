@@ -73,6 +73,38 @@ body {
     box-sizing: border-box;
 }
 
+#modelSelection ul {
+    width: 100%;
+    display: flex;
+    float: left;
+    padding: 0%;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#modelSelection ul li input[type="number"] {
+    /* Firefox */
+    -moz-appearance: textfield;
+}
+
+#modelSelection ul li {
+    width: 30%;
+    float: left;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+#modelSelection ul.concentration li {
+    width: 45%;
+    float: left;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+
 button {
     margin-top: 10px;
     padding: 10px 20px;

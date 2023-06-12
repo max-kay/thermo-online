@@ -15,7 +15,7 @@
             <h1>Thermodynamic Models</h1>
             <p>
                 An implementation of the simulation techniques discussed in the course on thermodynamics and phase
-                transitions. Bala aajj ajn ajne ujrubbue bsbe i os e fojbf.
+                transitions.
             </p>
             <p>
                 pL = per LatticeSite
@@ -26,9 +26,10 @@
         <div id="modelSelection" class="boxed">
             <div class="cols">
                 <div class="col">
-                    <label for="modelSize">Model Size</label>
+                    <label for="modelSize">Model Size:</label>
                     <select id="modelSize">
-                        <option value=32>32</option>
+                        <option value=16>16</option>
+                        <option value=32 selected>32</option>
                         <option value=64>64</option>
                         <option value=128>128</option>
                         <option value=256>256</option>
@@ -36,32 +37,48 @@
 
                     <label for="method">Method:</label>
                     <select id="method" name="method">
-                        <option value="monte_carlo_swap">Swap</option>
                         <option value="move_vacancy">Move Vacancy</option>
+                        <option value="monte_carlo_swap">Swap</option>
                     </select><br>
-                    Ineraction Energies
-                    <label for="j"> A ↔ A</label>
-                    <input type="number" id="j00" value="-1.0"><br>
-
-                    <label for="j01"> A ↔ B</label>
-                    <input type="number" id="j01" value="-0.75"><br>
-
-                    <label for="j11"> B ↔ B</label>
-                    <input type="number" id="j11" value="-1.0"><br>
-
+                    Ineraction Energies<br>
+                    <ul style="list-style: none;">
+                        <li>
+                            <label for="j00"> A↔A</label>
+                            <input type="number" id="j00" value="-1.0"><br>
+                        </li>
+                        <li>
+                            <label for="j01"> A↔B</label>
+                            <input type="number" id="j01" value="-0.75"><br>
+                        </li>
+                        <li>
+                            <label for="j11"> B↔B</label>
+                            <input type="number" id="j11" value="-1.0"><br>
+                        </li>
+                    </ul><br>
+                    Concentration<br>
+                    <ul style="list-style: none;" class="concentration">
+                        <li>
+                            <label for="cB">A</label>
+                            <input type="number" id="cA" value="1.0"><br>
+                        </li>
+                        <li>
+                            <label for="cA">B</label>
+                            <input type="number" id="cB" value="1.0"><br>
+                        </li>
+                    </ul>
                 </div>
                 <div class="col">
                     <label for="tempSteps">Temperature Steps:</label>
                     <input type="number" id="tempSteps" value="40"><br>
 
                     <label for="startTemp">Start Temperature:</label>
-                    <input type="number" id="startTemp" value="4.0"><br>
+                    <input type="number" id="startTemp" value="1.5"><br>
 
                     <label for="eSteps">Steps for Equilibrium pL:</label>
-                    <input type="number" id="eSteps" value="300"><br>
+                    <input type="number" id="eSteps" value="1000"><br>
 
                     <label for="mSteps">Steps for Measurement pL:</label>
-                    <input type="number" id="mSteps" value="200"><br>
+                    <input type="number" id="mSteps" value="500"><br>
                 </div>
             </div>
             <button onclick="runSimulation()" id="run">Run</button>

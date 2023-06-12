@@ -1,7 +1,7 @@
-import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies, start_logs } from "thermo-online";
+import { XSmallModel, SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies, start_logs } from "thermo-online";
 import { memory } from "thermo-online/thermo_online_bg";
 import { gsap } from "gsap";
-import Plotly from 'plotly.js-dist-min';
+import Plotly from "plotly.js-dist-min";
 
 start_logs()
 
@@ -41,6 +41,8 @@ let startTemp = 8.0;
 let eSteps = 100;
 let mSteps = 100;
 let nFrames = 3;
+let cA;
+let cB;
 let method;
 let energies;
 
@@ -51,8 +53,6 @@ let model;
 // update colors for legend
 document.styleSheets[0].insertRule(".color0{ background:" + get_color(0) + ";}")
 document.styleSheets[0].insertRule(".color1{ background:" + get_color(1) + ";}")
-
-window.addEventListener("beforeunload", function () { model = undefined })
 
 function readInputs() {
     method = document.getElementById('method').value;
@@ -65,7 +65,12 @@ function readInputs() {
         parseFloat(document.getElementById("j01").value),
         parseFloat(document.getElementById("j11").value),
     )
+    cA = parseFloat(document.getElementById("cA").value);
+    cB = parseFloat(document.getElementById("cB").value);
     switch (parseInt(document.getElementById('modelSize').value)) {
+        case 16:
+            Model = XSmallModel;
+            break;
         case 32:
             Model = SmallModel;
             break;
@@ -128,7 +133,7 @@ function runSimulation() {
     setUIRunning()
     nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
-    model = Model.new(energies, 1.0, 1.0, method, tempSteps, Math.round(sPerFrame * 100));
+    model = Model.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100));
 
     function animateSimulation(i) {
         if (i < tempSteps) {
@@ -143,7 +148,7 @@ function runSimulation() {
             setUIOutput()
             const gifLen = model.gif_len();
             const gifPtr = model.gif_ptr();
-            
+
             document.getElementById("run").disabled = false;
             document.getElementById("run").innerHTML = "Rerun";
             document.getElementById("running").display = "none";
@@ -160,9 +165,9 @@ function runSimulation() {
             const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
             const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
 
-            plot("energyTemp", temp, energy, "Temperature", "Energy pL");
-            plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity");
-            plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");   
+            plot("energyTemp", temp, energy, "Temperature", "Energy (pL)");
+            plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity (pL)");
+            plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");
         }
     }
 

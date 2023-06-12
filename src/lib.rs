@@ -171,3 +171,4 @@ makemodel!(XBigModel, 256);
 makemodel!(BigModel, 128);
 makemodel!(MediumModel, 64);
 makemodel!(SmallModel, 32);
+makemodel!(XSmallModel, 32);
