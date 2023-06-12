@@ -1,5 +1,6 @@
 import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies, start_logs } from "thermo-online";
 import { memory } from "thermo-online/thermo_online_bg";
+import { gsap } from "gsap";
 import Plotly from 'plotly.js-dist-min';
 
 start_logs()
@@ -104,50 +105,69 @@ function plot(id, xs, ys, x_title, y_title) {
     Plotly.newPlot(id, [trace1], l1);
 }
 
+function setUIRunning() {
+    requestAnimationFrame(() => {
+        gsap.to("#modelOutput", { display: "none" })
+        gsap.to("#running", { display: "block" })
+        gsap.to("#progress", { width: "0%" })
+    })
+}
+function setUIOutput() {
+    requestAnimationFrame(() => {
+        gsap.to("#modelOutput", { display: "block" })
+        gsap.to("#running", { display: "none" })
+    })
+}
+
 function runSimulation() {
     model = undefined;
     console.log("started running");
     document.getElementById("modelOutput").style.display = "none";
     document.getElementById("run").disabled = true;
-    readInputs()
-
-    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1) // for around 10fps
-    let sPerFrame = GIF_DURATION / tempSteps / nFrames
+    readInputs();
+    setUIRunning()
+    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
+    let sPerFrame = GIF_DURATION / tempSteps / nFrames;
     model = Model.new(energies, 1.0, 1.0, method, tempSteps, Math.round(sPerFrame * 100));
 
-    let progressBar = document.getElementById("progress").style;
-    for (let i = 0; i < tempSteps; i++) {
-        const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
-        model.run_at_temp(eSteps, mSteps, temp, nFrames);
-        console.log(temp);
-        console.log(i);
-        progressBar.width = i / (tempSteps - 1) * 100 + "%";
-        progressBar.innerHTML = (i + 1) + " / " + tempSteps;;
+    function animateSimulation(i) {
+        if (i < tempSteps) {
+            const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
+            model.run_at_temp(eSteps, mSteps, temp, nFrames);
+            console.log(i);
+            i++;
+            gsap.to("#progress", { width: (i / (tempSteps - 1)) * 100 + "%" });
+
+            requestAnimationFrame(() => animateSimulation(i));
+        } else {
+            setUIOutput()
+            const gifLen = model.gif_len();
+            const gifPtr = model.gif_ptr();
+            
+            document.getElementById("run").disabled = false;
+            document.getElementById("run").innerHTML = "Rerun";
+            document.getElementById("running").display = "none";
+            document.getElementById("modelOutput").style.display = "block";
+
+            const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
+            let blob = new Blob([gifData], { type: "image/gif" });
+            let url = URL.createObjectURL(blob);
+            let img = document.getElementById("animationGif");
+            img.src = url;
+
+            const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
+            const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
+            const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
+            const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
+
+            plot("energyTemp", temp, energy, "Temperature", "Energy pL");
+            plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity");
+            plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");   
+        }
     }
 
-
-    const gifLen = model.gif_len();
-    const gifPtr = model.gif_ptr();
-
-
-    document.getElementById("run").disabled = false;
-    document.getElementById("run").innerHTML = "Rerun"
-    document.getElementById("modelOutput").style.display = "block";
-
-    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
-    let blob = new Blob([gifData], { type: 'image/gif' });
-    let url = URL.createObjectURL(blob);
-    let img = document.getElementById("animationGif");
-    img.src = url;
-
-    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
-    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
-    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
-    const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
-
-    plot("energyTemp", temp, energy, "Temperature", "Energy pL")
-    plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity")
-    plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate")
+    animateSimulation(0)
 }
+
 
 window.runSimulation = runSimulation;

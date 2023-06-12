@@ -97,16 +97,16 @@ button:disabled {
 }
 
 #progressBar {
-    height: 10px;
+    height: 20px;
     background-color: #555;
     border-radius: 5px;
     overflow: hidden;
-    margin-top: 20px;
 }
 
 #progress {
     height: 100%;
     background-color: #4CAF50;
+    justify-content: center;
 }
 
 #modelOutput {
