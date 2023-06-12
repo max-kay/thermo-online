@@ -22,8 +22,13 @@ pub fn get_color(num: u8) -> String {
 #[allow(unused)]
 macro_rules! console {
     ( $( $t:tt )* ) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
+        web_sys::console::log_1(&format!( $( $t )* ).into())
     }
+}
+
+#[wasm_bindgen]
+pub fn start_logs() {
+    utils::set_panic_hook()
 }
 
 #[wasm_bindgen]
@@ -45,7 +50,6 @@ macro_rules! makemodel {
             int_energy: Vec<f32>,
             heat_capacity: Vec<f32>,
             acceptance_rate: Vec<f32>,
-            first_frame_present: bool,
         }
 
         #[wasm_bindgen]
@@ -58,7 +62,6 @@ macro_rules! makemodel {
                 log_capacity: u32,
                 gif_delay: u16,
             ) -> Self {
-                utils::set_panic_hook();
                 let method = match method {
                     "monte_carlo_swap" => System::monte_carlo_swap,
                     "move_vacancy" => System::move_vacancy,
@@ -85,7 +88,6 @@ macro_rules! makemodel {
                     int_energy: Vec::with_capacity(log_capacity as usize),
                     heat_capacity: Vec::with_capacity(log_capacity as usize),
                     acceptance_rate: Vec::with_capacity(log_capacity as usize),
-                    first_frame_present: false,
                 }
             }
 
@@ -96,10 +98,6 @@ macro_rules! makemodel {
                 temp: f32,
                 frames: u32,
             ) {
-                if !self.first_frame_present {
-                    let frame = self.system.get_frame();
-                    self.encoder.write_frame(&frame).unwrap()
-                }
                 let tot_steps = measurement_steps * $size * $size;
                 self.temp.push(temp);
                 for _ in 0..equilibrium_steps * $size * $size {
@@ -111,16 +109,16 @@ macro_rules! makemodel {
                 for k in 0..tot_steps {
                     accepted += (self.method)(&mut self.system, 1.0 / temp) as u32;
                     stats.add_value(self.system.internal_energy());
-                    if k % (measurement_steps / frames) == 0 {
+                    if k % (tot_steps / frames) == 0 {
                         let frame = self.system.get_frame();
-                        self.encoder.write_frame(&frame).unwrap()
+                        self.encoder.write_frame(&frame).unwrap();
                     }
                 }
                 self.int_energy.push(stats.avg() / ($size * $size) as f32);
                 self.heat_capacity
                     .push(stats.variance() / (temp * temp) / ($size * $size) as f32);
                 self.acceptance_rate
-                    .push(accepted as f32 / tot_steps as f32)
+                    .push(accepted as f32 / tot_steps as f32);
             }
         }
 
@@ -144,7 +142,6 @@ macro_rules! makemodel {
             }
         }
 
-        /// Animation stuff
         #[wasm_bindgen]
         impl $name {
             pub fn width(&self) -> u32 {

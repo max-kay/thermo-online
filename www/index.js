@@ -1,6 +1,8 @@
-import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies } from "thermo-online";
+import { SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies, start_logs } from "thermo-online";
 import { memory } from "thermo-online/thermo_online_bg";
 import Plotly from 'plotly.js-dist-min';
+
+start_logs()
 
 const PLOTLY_LAYOUT = {
     xaxis: {
@@ -31,7 +33,7 @@ const PLOTLY_LAYOUT = {
     }
 };
 
-const GIF_DURATION = 5.0;
+const GIF_DURATION = 10.0;
 
 let tempSteps = 10;
 let startTemp = 8.0;
@@ -49,7 +51,6 @@ let model;
 document.styleSheets[0].insertRule(".color0{ background:" + get_color(0) + ";}")
 document.styleSheets[0].insertRule(".color1{ background:" + get_color(1) + ";}")
 
-// TODO check if this fixes memory leaks
 window.addEventListener("beforeunload", function () { model = undefined })
 
 function readInputs() {
@@ -110,11 +111,8 @@ function runSimulation() {
     document.getElementById("run").disabled = true;
     readInputs()
 
-    // TODO figure out nFrame in code
-    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1)
+    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1) // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames
-    console.log(sPerFrame + " s per frame")
-    console.log(sPerFrame * nFrames * tempSteps + "s in total")
     model = Model.new(energies, 1.0, 1.0, method, tempSteps, Math.round(sPerFrame * 100));
 
     let progressBar = document.getElementById("progress").style;
