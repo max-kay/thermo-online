@@ -163,7 +163,6 @@ macro_rules! makemodel {
                 zip.write_all(&self.encoder.get_ref()).unwrap();
                 zip.start_file("model_output.csv", options).unwrap();
                 zip.write_all(&csv).unwrap();
-                zip.finish().unwrap();
                 self.zip_data = Some(zip.finish().unwrap().into_inner());
             }
 
