@@ -56,6 +56,7 @@ macro_rules! makemodel {
                 c_2: f64,
                 method: &str,
                 log_capacity: u32,
+                gif_delay: u16,
             ) -> Self {
                 utils::set_panic_hook();
                 let method = match method {
@@ -69,7 +70,12 @@ macro_rules! makemodel {
                         System::move_vacancy
                     }
                 };
-                let encoder = phases::anim::prepare_vec_encoder($size, $size, None);
+                let mut palette = PALETTE.to_vec();
+                palette[4 * 3] = 0;
+                palette[4 * 3 + 1] = 0;
+                palette[4 * 3 + 2] = 0;
+                let encoder =
+                    phases::anim::prepare_vec_encoder($size, $size, Some(gif_delay), &palette);
                 let energies = [energies[0], energies[1], energies[2], energies[3]];
                 Self {
                     system: System::new(energies, None, Concentration::new([c_1, c_2])),
@@ -97,26 +103,22 @@ macro_rules! makemodel {
                 let tot_steps = measurement_steps * $size * $size;
                 self.temp.push(temp);
                 for _ in 0..equilibrium_steps * $size * $size {
-                    (self.method)(&mut self.system, temp);
+                    (self.method)(&mut self.system, 1.0 / temp);
                 }
 
                 let mut stats = phases::StreamingVariance::new();
                 let mut accepted = 0;
                 for k in 0..tot_steps {
-                    accepted += (self.method)(&mut self.system, temp) as u32;
+                    accepted += (self.method)(&mut self.system, 1.0 / temp) as u32;
                     stats.add_value(self.system.internal_energy());
                     if k % (measurement_steps / frames) == 0 {
                         let frame = self.system.get_frame();
                         self.encoder.write_frame(&frame).unwrap()
                     }
                 }
-                self.int_energy
-                    .push(stats.avg() / ($size as f32 * $size as f32));
-                self.heat_capacity.push(
-                    stats.variance()
-                        / (temp * temp)
-                        / ($size as f32 * $size as f32 * $size as f32 * $size as f32),
-                );
+                self.int_energy.push(stats.avg() / ($size * $size) as f32);
+                self.heat_capacity
+                    .push(stats.variance() / (temp * temp) / ($size * $size) as f32);
                 self.acceptance_rate
                     .push(accepted as f32 / tot_steps as f32)
             }

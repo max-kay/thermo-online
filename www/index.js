@@ -31,6 +31,8 @@ const PLOTLY_LAYOUT = {
     }
 };
 
+const GIF_DURATION = 5.0;
+
 let tempSteps = 10;
 let startTemp = 8.0;
 let eSteps = 100;
@@ -109,8 +111,11 @@ function runSimulation() {
     readInputs()
 
     // TODO figure out nFrame in code
-
-    model = Model.new(energies, 1.0, 1.0, method, tempSteps * nFrames, tempSteps);
+    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1)
+    let sPerFrame = GIF_DURATION / tempSteps / nFrames
+    console.log(sPerFrame + " s per frame")
+    console.log(sPerFrame * nFrames * tempSteps + "s in total")
+    model = Model.new(energies, 1.0, 1.0, method, tempSteps, Math.round(sPerFrame * 100));
 
     let progressBar = document.getElementById("progress").style;
     for (let i = 0; i < tempSteps; i++) {
@@ -126,17 +131,17 @@ function runSimulation() {
     const gifLen = model.gif_len();
     const gifPtr = model.gif_ptr();
 
-    
+
     document.getElementById("run").disabled = false;
     document.getElementById("run").innerHTML = "Rerun"
     document.getElementById("modelOutput").style.display = "block";
-    
+
     const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
     let blob = new Blob([gifData], { type: 'image/gif' });
     let url = URL.createObjectURL(blob);
     let img = document.getElementById("animationGif");
     img.src = url;
-    console.log(img);
+
     const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
     const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
     const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
