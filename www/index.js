@@ -110,15 +110,21 @@ function plot(id, xs, ys, x_title, y_title) {
     Plotly.newPlot(id, [trace1], l1);
 }
 
-function setUIRunning() {
+function setUiRunning() {
     requestAnimationFrame(() => {
+        document.getElementById("modelOutput").style.display = "none";
+        document.getElementById("run").disabled = true;
         gsap.to("#modelOutput", { display: "none" })
         gsap.to("#running", { display: "block" })
         gsap.to("#progress", { width: "0%" })
     })
 }
-function setUIOutput() {
+function setUiOutput() {
     requestAnimationFrame(() => {
+        document.getElementById("run").disabled = false;
+        document.getElementById("run").innerHTML = "Rerun";
+        document.getElementById("running").display = "none";
+        document.getElementById("modelOutput").style.display = "block";
         gsap.to("#modelOutput", { display: "block" })
         gsap.to("#running", { display: "none" })
     })
@@ -126,11 +132,8 @@ function setUIOutput() {
 
 function runSimulation() {
     model = undefined;
-
-    document.getElementById("modelOutput").style.display = "none";
-    document.getElementById("run").disabled = true;
     readInputs();
-    setUIRunning()
+    setUiRunning()
     nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
     model = Model.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100));
@@ -139,44 +142,45 @@ function runSimulation() {
         if (i < tempSteps) {
             const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
             model.run_at_temp(eSteps, mSteps, temp, nFrames);
-            i++;
             gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
+            i++;
             requestAnimationFrame(() => animateSimulation(i));
         } else {
             model.do_data_analysis();
             console.log("simulation done")
-            setUIOutput();
-
-            document.getElementById("run").disabled = false;
-            document.getElementById("run").innerHTML = "Rerun";
-            document.getElementById("running").display = "none";
-            document.getElementById("modelOutput").style.display = "block";
-
-            const gifLen = model.gif_len();
-            const gifPtr = model.gif_ptr();
-            const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
-            let blob = new Blob([gifData], { type: "image/gif" });
-            let url = URL.createObjectURL(blob);
-            let img = document.getElementById("animationGif");
-            img.src = url;
-
-            const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
-            const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
-            const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
-            const entropy = new Float32Array(memory.buffer, model.entropy_ptr(), model.log_len());
-            const free_energy = new Float32Array(memory.buffer, model.free_energy_ptr(), model.log_len());
-            const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
-
-            plot("energyTemp", temp, energy, "Temperature", "Energy (pL)");
-            plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity (pL)");
-            plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");
-            plot("entropyTemp", temp, entropy, "Temperature", "Entropy (pL)");
-            plot("freeTemp", temp, free_energy, "Temperature", "Free Energy (pL)");
+            setGif();
+            setUiOutput();
+            makePlots();
         }
     }
     console.log("simulation started")
     animateSimulation(0)
 
+}
+
+function setGif() {
+    const gifLen = model.gif_len();
+    const gifPtr = model.gif_ptr();
+    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
+    let blob = new Blob([gifData], { type: "image/gif" });
+    let url = URL.createObjectURL(blob);
+    let img = document.getElementById("animationGif");
+    img.src = url;
+}
+
+function makePlots() {
+    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
+    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
+    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
+    const entropy = new Float32Array(memory.buffer, model.entropy_ptr(), model.log_len());
+    const free_energy = new Float32Array(memory.buffer, model.free_energy_ptr(), model.log_len());
+    const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
+
+    plot("energyTemp", temp, energy, "Temperature", "Energy (pL)");
+    plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity (pL)");
+    plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");
+    plot("entropyTemp", temp, entropy, "Temperature", "Entropy (pL)");
+    plot("freeTemp", temp, free_energy, "Temperature", "Free Energy (pL)");
 }
 
 function getZip() {
