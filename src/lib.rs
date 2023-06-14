@@ -194,7 +194,21 @@ macro_rules! makemodel {
 
         #[wasm_bindgen]
         impl $name {
-            pub fn make_zip(&mut self) {
+            pub fn make_zip(&mut self, method: &str, temp_steps: u32, start_temp: f32, e_steps: u32, m_steps: u32) {
+                let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+                let options = FileOptions::default()
+                                    .compression_method(zip::CompressionMethod::Deflated)
+                                    .unix_permissions(0o755);
+                zip.start_file("animation.gif", options).unwrap();
+                zip.write_all(&self.encoder.get_ref()).unwrap();
+                zip.start_file("model_output.csv", options).unwrap();
+                zip.write_all(&self.make_csv_buffer()).unwrap();
+                zip.start_file("model_params.txt", options).unwrap();
+                zip.write_all(&self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps)).unwrap();
+                self.zip_data = Some(zip.finish().unwrap().into_inner());
+            }
+
+            fn make_csv_buffer(&self) -> Vec<u8> {
                 let mut csv = Vec::new();
                 writeln!(csv, "This file was generated as output to Thermodynamic Models https://n.ethz.ch/~mkrummenache").unwrap();
                 writeln!(csv, "All extensive variable are divided by the number of lattice sites.").unwrap();
@@ -213,15 +227,20 @@ macro_rules! makemodel {
                         self.free_energy[i],
                     ).unwrap()
                 }
-                let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
-                let options = FileOptions::default()
-                                    .compression_method(zip::CompressionMethod::Deflated)
-                                    .unix_permissions(0o755);
-                zip.start_file("animation.gif", options).unwrap();
-                zip.write_all(&self.encoder.get_ref()).unwrap();
-                zip.start_file("model_output.csv", options).unwrap();
-                zip.write_all(&csv).unwrap();
-                self.zip_data = Some(zip.finish().unwrap().into_inner());
+                csv
+            }
+
+            fn make_model_params(&self, method: &str, temp_steps: u32, start_temp: f32, e_steps: u32, m_steps: u32) -> Vec<u8> {
+                let mut buf = Vec::new();
+                writeln!(buf, "Model Size: {}", $size).unwrap();
+                writeln!(buf, "Method: {}", method).unwrap();
+                writeln!(buf, "Energies: {}", self.system.get_energies_dict()).unwrap();
+                writeln!(buf, "Concentration A: {}, Concentration B: {}", self.c_0, self.c_1).unwrap();
+                writeln!(buf, "Temperature Steps: {}", temp_steps).unwrap();
+                writeln!(buf, "Start Temperature: {}", start_temp).unwrap();
+                writeln!(buf, "Steps for Equilibrium: {}", e_steps).unwrap();
+                writeln!(buf, "Steps for Measurement: {}", m_steps).unwrap();
+                buf
             }
 
             pub fn get_zip_ptr(&self) -> *const u8 {

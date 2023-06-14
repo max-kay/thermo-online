@@ -180,7 +180,7 @@ function runSimulation() {
 }
 
 function getZip() {
-    model.make_zip();
+    model.make_zip(method, tempSteps,startTemp, eSteps, mSteps);
     const ptr = model.get_zip_ptr();
     const len = model.get_zip_len();
     const zipData = new Uint8Array(memory.buffer, ptr, len);
