@@ -52,15 +52,19 @@ macro_rules! makemodel {
             int_energy: Vec<f32>,
             heat_capacity: Vec<f32>,
             acceptance_rate: Vec<f32>,
+            entropy: Vec<f32>,
+            free_energy: Vec<f32>,
             zip_data: Option<Vec<u8>>,
+            c_0: f32,
+            c_1: f32,
         }
 
         #[wasm_bindgen]
         impl $name {
             pub fn new(
                 energies: Vec<f32>,
+                c_0: f64,
                 c_1: f64,
-                c_2: f64,
                 method: &str,
                 log_capacity: u32,
                 gif_delay: u16,
@@ -84,13 +88,17 @@ macro_rules! makemodel {
                     phases::anim::prepare_vec_encoder($size, $size, Some(gif_delay), &palette);
                 let energies = [energies[0], energies[1], energies[2], energies[3]];
                 Self {
-                    system: System::new(energies, None, Concentration::new([c_1, c_2])),
+                    c_0: (c_0 / (c_0 + c_1)) as f32,
+                    c_1: (c_1 / (c_0 + c_1)) as f32,
+                    system: System::new(energies, None, Concentration::new([c_0, c_1])),
                     method,
                     encoder,
                     temp: Vec::with_capacity(log_capacity as usize),
                     int_energy: Vec::with_capacity(log_capacity as usize),
                     heat_capacity: Vec::with_capacity(log_capacity as usize),
                     acceptance_rate: Vec::with_capacity(log_capacity as usize),
+                    entropy: Vec::with_capacity(log_capacity as usize),
+                    free_energy: Vec::with_capacity(log_capacity as usize),
                     zip_data: None,
                 }
             }
@@ -124,6 +132,36 @@ macro_rules! makemodel {
                 self.acceptance_rate
                     .push(accepted as f32 / tot_steps as f32);
             }
+
+            pub fn do_data_analysis(&mut self) {
+                self.calc_entropy();
+                self.calc_free_energy();
+            }
+
+            fn calc_entropy(&mut self) {
+                if !self.entropy.is_empty() {
+                    self.entropy = Vec::with_capacity(self.heat_capacity.len());
+                }
+                for i in 1..self.heat_capacity.len() {
+                    let avg = (self.heat_capacity[i-1] / self.temp[i-1]
+                         + self.heat_capacity[i] / self.temp[i])
+                         / 2.0;
+                    let last = self.entropy.last().copied().unwrap_or(-(self.c_0.ln() * self.c_0 + self.c_1.ln() * self.c_1));
+                    if avg.is_finite() {
+                        self.entropy.push(last + (self.temp[i] - self.temp[i-1]) * avg);
+                    } else {
+                        self.entropy.push(last)
+                    }
+                }
+                let last = self.entropy.last().unwrap();
+                self.entropy.push(*last)
+            }
+
+            fn calc_free_energy(&mut self) {
+                for i in 0..self.int_energy.len() {
+                    self.free_energy.push(self.int_energy[i]-self.temp[i]*self.entropy[i])
+                }
+            }
         }
 
         #[wasm_bindgen]
@@ -144,16 +182,36 @@ macro_rules! makemodel {
             pub fn acceptance_rate_ptr(&self) -> *const f32 {
                 self.acceptance_rate.as_ptr()
             }
+            /// this function is not safe before calling `do_data_analysis`
+            pub fn entropy_ptr(&self) -> *const f32 {
+                self.entropy.as_ptr()
+            }
+            /// this function is not safe before calling `do_data_analysis`
+            pub fn free_energy_ptr(&self) -> *const f32 {
+                self.free_energy.as_ptr()
+            }
         }
 
         #[wasm_bindgen]
         impl $name {
             pub fn make_zip(&mut self) {
                 let mut csv = Vec::new();
-                writeln!(csv, "This file was generated as output to Thermodynamic Models by Max Krummenacher (mkrummenache@student.ethz.ch)").unwrap();
-                writeln!(csv, "Temperature,Internal Energy,Heat Capacity,Acceptance Rate").unwrap();
+                writeln!(csv, "This file was generated as output to Thermodynamic Models https://n.ethz.ch/~mkrummenache").unwrap();
+                writeln!(csv, "All extensive variable are divided by the number of lattice sites.").unwrap();
+                writeln!(csv, "Code for website: https://github.com/max-kay/thermo-online").unwrap();
+                writeln!(csv, "Rust library used for the simulation: https://github.com/max-kay/phases").unwrap();
+                writeln!(csv, "temperature,internal_energy,heat_capacity,acceptance_rate,entropy,free_energy").unwrap();
                 for i in 0..self.int_energy.len(){
-                    writeln!(csv, "{},{},{},{}", self.temp[i], self.int_energy[i], self.heat_capacity[i], self.acceptance_rate[i]).unwrap()
+                    writeln!(
+                        csv,
+                        "{},{},{},{},{},{},",
+                        self.temp[i],
+                        self.int_energy[i],
+                        self.heat_capacity[i],
+                        self.acceptance_rate[i],
+                        self.entropy[i],
+                        self.free_energy[i],
+                    ).unwrap()
                 }
                 let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
                 let options = FileOptions::default()

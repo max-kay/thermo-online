@@ -126,7 +126,7 @@ function setUIOutput() {
 
 function runSimulation() {
     model = undefined;
-    console.log("started running");
+
     document.getElementById("modelOutput").style.display = "none";
     document.getElementById("run").disabled = true;
     readInputs();
@@ -139,21 +139,21 @@ function runSimulation() {
         if (i < tempSteps) {
             const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
             model.run_at_temp(eSteps, mSteps, temp, nFrames);
-            console.log(i);
             i++;
-            gsap.to("#progress", { width: (i / (tempSteps - 1)) * 100 + "%" });
-
+            gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
             requestAnimationFrame(() => animateSimulation(i));
         } else {
-            setUIOutput()
-            const gifLen = model.gif_len();
-            const gifPtr = model.gif_ptr();
+            model.do_data_analysis();
+            console.log("simulation done")
+            setUIOutput();
 
             document.getElementById("run").disabled = false;
             document.getElementById("run").innerHTML = "Rerun";
             document.getElementById("running").display = "none";
             document.getElementById("modelOutput").style.display = "block";
 
+            const gifLen = model.gif_len();
+            const gifPtr = model.gif_ptr();
             const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
             let blob = new Blob([gifData], { type: "image/gif" });
             let url = URL.createObjectURL(blob);
@@ -163,15 +163,20 @@ function runSimulation() {
             const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
             const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
             const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
+            const entropy = new Float32Array(memory.buffer, model.entropy_ptr(), model.log_len());
+            const free_energy = new Float32Array(memory.buffer, model.free_energy_ptr(), model.log_len());
             const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
 
             plot("energyTemp", temp, energy, "Temperature", "Energy (pL)");
             plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity (pL)");
             plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");
+            plot("entropyTemp", temp, entropy, "Temperature", "Entropy (pL)");
+            plot("freeTemp", temp, free_energy, "Temperature", "Free Energy (pL)");
         }
     }
-
+    console.log("simulation started")
     animateSimulation(0)
+
 }
 
 function getZip() {

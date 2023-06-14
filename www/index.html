@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>Thermodynamic Model</title>
 </head>
 
@@ -13,14 +14,32 @@
     <div id="top">
         <div id="titles" class="boxed">
             <h1>Thermodynamic Models</h1>
-            <p>
-                An implementation of the simulation techniques discussed in the course on thermodynamics and phase
-                transitions.
-            </p>
-            <p>
-                pL = per LatticeSite
-            </p>
+            <p>This is an implementation of simulation techniques discussed in the thermodynamics and phase transitions
+                course.</p>
+            <h2>Parameters</h2>
+            <p>The <i>Method</i> parameter allows you to choose the simulation method:</p>
+            <ul>
+                <li><i>Swap</i>: Chooses two lattice sites randomly and performs a Monte Carlo step.</li>
+                <li><i>Move Vacancy</i>: Introduces a vacancy in the lattice, then selects a neighboring cell and
+                    performs a Monte
+                    Carlo step.</li>
+            </ul>
+            <p>This model conducts a simple quenching simulation from the <i>Start Temperature</i> to 0. The
+                <i>Temperature
+                    Steps</i> parameter determines the number of steps for this cooling process.</p>
+            <p>The <i>Steps for Equilibrium</i> parameter specifies the number of steps the model runs at each
+                temperature before
+                any measurement is made. The <i>Steps for Measurement</i> parameter determines the number of steps over
+                which
+                measurements are taken.</p>
+            <p>All extensive variables are given per lattice site and denoted with "(pL)".</p>
+            <br>
+            <br>
+            <a href="https://github.com/max-kay/thermo-online"><i class="fa fa-github"></i> Code for website</a><br>
+            <a href="https://github.com/max-kay/phases"><i class="fa fa-github"></i> Rust crate used for the
+                simulation</a><br>
             <a href="mailto:mkrummenache@student.ethz.ch" id="author">by Max Krummenacher</a>
+
         </div>
 
         <div id="modelSelection" class="boxed">
@@ -81,6 +100,7 @@
                     <input type="number" id="mSteps" value="500"><br>
                 </div>
             </div>
+            <div id="spacer"></div>
             <button onclick="runSimulation()" id="run">Run</button>
         </div>
     </div>
@@ -103,6 +123,10 @@
         </div>
         <div class="cols">
             <div id="acceptanceTemp" class="col"></div>
+            <div id="entropyTemp" class="col"></div>
+        </div>
+        <div class="cols">
+            <div id="freeTemp" class="col"></div>
         </div>
         <button onclick="getZip()" id="zip">Download all as .zip</button>
     </div>
