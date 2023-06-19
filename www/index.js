@@ -112,21 +112,17 @@ function plot(id, xs, ys, x_title, y_title) {
 
 function setUiRunning() {
     requestAnimationFrame(() => {
-        document.getElementById("modelOutput").style.display = "none";
-        document.getElementById("run").disabled = true;
-        gsap.to("#modelOutput", { display: "none" })
-        gsap.to("#running", { display: "block" })
-        gsap.to("#progress", { width: "0%" })
+        gsap.to("#run", { disabled: true, duration: 0 })
+        gsap.to("#modelOutput", { display: "none", duration: 0 })
+        gsap.to("#running", { display: "block", duration: 0 })
+        gsap.to("#progress", { width: "0%", duration: 0 })
     })
 }
 function setUiOutput() {
     requestAnimationFrame(() => {
-        document.getElementById("run").disabled = false;
-        document.getElementById("run").innerHTML = "Rerun";
-        document.getElementById("running").display = "none";
-        document.getElementById("modelOutput").style.display = "block";
-        gsap.to("#modelOutput", { display: "block" })
-        gsap.to("#running", { display: "none" })
+        gsap.to("#run", { disabled: false, innerHTML: "Rerun", duration: 0.01 })
+        gsap.to("#modelOutput", { display: "block", duration: 0.01 })
+        gsap.to("#running", { display: "none", duration: 0.02 })
     })
 }
 
@@ -149,13 +145,12 @@ function runSimulation() {
             model.do_data_analysis();
             console.log("simulation done")
             setGif();
-            setUiOutput();
             makePlots();
+            setUiOutput();
         }
     }
     console.log("simulation started")
     animateSimulation(0)
-
 }
 
 function setGif() {
@@ -184,7 +179,7 @@ function makePlots() {
 }
 
 function getZip() {
-    model.make_zip(method, tempSteps,startTemp, eSteps, mSteps);
+    model.make_zip(method, tempSteps, startTemp, eSteps, mSteps);
     const ptr = model.get_zip_ptr();
     const len = model.get_zip_len();
     const zipData = new Uint8Array(memory.buffer, ptr, len);
