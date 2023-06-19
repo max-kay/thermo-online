@@ -2,7 +2,6 @@ use phases::{Array2d, BinAtom as Atom, BinConcentration as Concentration, System
 use std::io::{Cursor, Write};
 use wasm_bindgen::prelude::*;
 use zip::write::{FileOptions, ZipWriter};
-mod utils;
 
 #[wasm_bindgen]
 extern "C" {
@@ -26,11 +25,6 @@ macro_rules! console {
     ( $( $t:tt )* ) => {
         web_sys::console::log_1(&format!( $( $t )* ).into())
     }
-}
-
-#[wasm_bindgen]
-pub fn start_logs() {
-    utils::set_panic_hook()
 }
 
 #[wasm_bindgen]

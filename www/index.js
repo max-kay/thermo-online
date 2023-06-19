@@ -3,8 +3,6 @@ import { memory } from "thermo-online/thermo_online_bg";
 import { gsap } from "gsap";
 import Plotly from "plotly.js-dist-min";
 
-start_logs()
-
 const PLOTLY_LAYOUT = {
     xaxis: {
         color: '#FFFFFF',
