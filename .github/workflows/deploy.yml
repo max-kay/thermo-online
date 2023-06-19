@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: 14
 
+      - name: Set up wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh -s -- -f
+
       - name: Build and deploy
         run: |
           cargo update
