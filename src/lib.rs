@@ -209,7 +209,7 @@ macro_rules! makemodel {
                 let mut csv = Vec::new();
                 writeln!(
                     csv,
-                    "This file was generated as output to Thermodynamic Models https://n.ethz.ch/~mkrummenache"
+                    "This file was generated as output to Thermodynamic Models https://max-kay.github.io/thermo-online/"
                 )
                 .expect("error writing csv header");
                 writeln!(
