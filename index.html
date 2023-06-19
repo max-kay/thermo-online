@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Thermodynamic Model</title>
+</head>
+
+<body>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your
+        browser.</noscript>
+    <div id="top">
+        <div id="titles" class="boxed">
+            <h1>Thermodynamic Models</h1>
+            <p>This is an implementation of simulation techniques discussed in the thermodynamics and phase transitions
+                course.</p>
+            <h2>Parameters</h2>
+            <p>The <i>Method</i> parameter allows you to choose the simulation method:</p>
+            <ul>
+                <li><i>Swap</i>: Chooses two lattice sites randomly and performs a Monte Carlo step.</li>
+                <li><i>Move Vacancy</i>: Introduces a vacancy in the lattice, then selects a neighboring cell and
+                    performs a Monte
+                    Carlo step.</li>
+            </ul>
+            <p>This model conducts a simple quenching simulation from the <i>Start Temperature</i> to 0. The
+                <i>Temperature
+                    Steps</i> parameter determines the number of steps for this cooling process.</p>
+            <p>The <i>Steps for Equilibrium</i> parameter specifies the number of steps the model runs at each
+                temperature before
+                any measurement is made. The <i>Steps for Measurement</i> parameter determines the number of steps over
+                which
+                measurements are taken.</p>
+            <p>All extensive variables are given per lattice site and denoted with "(pL)".</p>
+            <br>
+            <br>
+            <a href="https://github.com/max-kay/thermo-online"><i class="fa fa-github"></i> Code for website</a><br>
+            <a href="https://github.com/max-kay/phases"><i class="fa fa-github"></i> Rust crate used for the
+                simulation</a><br>
+            <a href="mailto:mkrummenache@student.ethz.ch" id="author">by Max Krummenacher</a>
+
+        </div>
+
+        <div id="modelSelection" class="boxed">
+            <div class="cols">
+                <div class="col">
+                    <label for="modelSize">Model Size:</label>
+                    <select id="modelSize">
+                        <option value=16>16</option>
+                        <option value=32 selected>32</option>
+                        <option value=64>64</option>
+                        <option value=128>128</option>
+                        <option value=256>256</option>
+                    </select><br>
+
+                    <label for="method">Method:</label>
+                    <select id="method" name="method">
+                        <option value="move_vacancy">Move Vacancy</option>
+                        <option value="monte_carlo_swap">Swap</option>
+                    </select><br>
+                    Ineraction Energies<br>
+                    <ul style="list-style: none;">
+                        <li>
+                            <label for="j00"> A↔A</label>
+                            <input type="number" id="j00" value="-1.0"><br>
+                        </li>
+                        <li>
+                            <label for="j01"> A↔B</label>
+                            <input type="number" id="j01" value="-0.75"><br>
+                        </li>
+                        <li>
+                            <label for="j11"> B↔B</label>
+                            <input type="number" id="j11" value="-1.0"><br>
+                        </li>
+                    </ul><br>
+                    Concentration<br>
+                    <ul style="list-style: none;" class="concentration">
+                        <li>
+                            <label for="cB">A</label>
+                            <input type="number" id="cA" value="1.0"><br>
+                        </li>
+                        <li>
+                            <label for="cA">B</label>
+                            <input type="number" id="cB" value="1.0"><br>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <label for="tempSteps">Temperature Steps:</label>
+                    <input type="number" id="tempSteps" value="40"><br>
+
+                    <label for="startTemp">Start Temperature:</label>
+                    <input type="number" id="startTemp" value="1.5"><br>
+
+                    <label for="eSteps">Steps for Equilibrium pL:</label>
+                    <input type="number" id="eSteps" value="1000"><br>
+
+                    <label for="mSteps">Steps for Measurement pL:</label>
+                    <input type="number" id="mSteps" value="500"><br>
+                </div>
+            </div>
+            <div id="spacer"></div>
+            <button onclick="runSimulation()" id="run">Run</button>
+        </div>
+    </div>
+    <div id="running" class="boxed">
+        <div id="progressBar">
+            <div id="progress"></div>
+        </div>
+    </div>
+    <div id="modelOutput" class="boxed">
+        <div id="animation">
+            <img id="animationGif" /><br>
+            <ul id="legend" style="list-style: none; line-height: 1;">
+                <li><span class="color0"></span> Atom A </li>
+                <li><span class="color1"></span> Atom B </li>
+            </ul>
+        </div>
+        <div class="cols">
+            <div id="energyTemp" class="col"></div>
+            <div id="capacityTemp" class="col"></div>
+        </div>
+        <div class="cols">
+            <div id="acceptanceTemp" class="col"></div>
+            <div id="entropyTemp" class="col"></div>
+        </div>
+        <div class="cols">
+            <div id="freeTemp" class="col"></div>
+        </div>
+        <button onclick="getZip()" id="zip">Download all data as .zip</button>
+    </div>
+    <script src="./bootstrap.js"></script>
+</body>
+
+</html>
