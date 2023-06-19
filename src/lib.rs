@@ -1,4 +1,4 @@
-use phases::{Array2d, NumAtom, NumC, System};
+use phases::{Array2d, BinAtom as Atom, BinConcentration as Concentration, System};
 use std::io::{Cursor, Write};
 use wasm_bindgen::prelude::*;
 use zip::write::{FileOptions, ZipWriter};
@@ -37,9 +37,6 @@ pub fn start_logs() {
 pub fn make_energies(j00: f32, j01: f32, j11: f32) -> Vec<f32> {
     vec![j00, j01, j01, j11]
 }
-
-type Concentration = NumC<2>;
-type Atom = NumAtom<2>;
 
 macro_rules! makemodel {
     ($name:ident, $size:literal) => {
@@ -90,7 +87,7 @@ macro_rules! makemodel {
                 Self {
                     c_0: (c_0 / (c_0 + c_1)) as f32,
                     c_1: (c_1 / (c_0 + c_1)) as f32,
-                    system: System::new(energies, None, Concentration::new([c_0, c_1])),
+                    system: System::new(energies, None, Concentration::new(c_0, c_1)),
                     method,
                     encoder,
                     temp: Vec::with_capacity(log_capacity as usize),
@@ -123,7 +120,7 @@ macro_rules! makemodel {
                     stats.add_value(self.system.internal_energy());
                     if k % (tot_steps / frames) == 0 {
                         let frame = self.system.get_frame();
-                        self.encoder.write_frame(&frame).unwrap();
+                        self.encoder.write_frame(&frame).expect("gif should be writable");
                     }
                 }
                 self.int_energy.push(stats.avg() / ($size * $size) as f32);
@@ -153,7 +150,7 @@ macro_rules! makemodel {
                         self.entropy.push(last)
                     }
                 }
-                let last = self.entropy.last().unwrap();
+                let last = self.entropy.last().expect("should have at least one element.");
                 self.entropy.push(*last)
             }
 
@@ -199,22 +196,42 @@ macro_rules! makemodel {
                 let options = FileOptions::default()
                                     .compression_method(zip::CompressionMethod::Deflated)
                                     .unix_permissions(0o755);
-                zip.start_file("animation.gif", options).unwrap();
-                zip.write_all(&self.encoder.get_ref()).unwrap();
-                zip.start_file("model_output.csv", options).unwrap();
-                zip.write_all(&self.make_csv_buffer()).unwrap();
-                zip.start_file("model_params.txt", options).unwrap();
-                zip.write_all(&self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps)).unwrap();
-                self.zip_data = Some(zip.finish().unwrap().into_inner());
+                zip.start_file("animation.gif", options).expect("error creating zip");
+                zip.write_all(&self.encoder.get_ref()).expect("error creating zip");
+                zip.start_file("model_output.csv", options).expect("error creating zip");
+                zip.write_all(&self.make_csv_buffer()).expect("error creating zip");
+                zip.start_file("model_params.txt", options).expect("error creating zip");
+                zip.write_all(&self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps)).expect("error creating zip");
+                self.zip_data = Some(zip.finish().expect("error creating zip").into_inner());
             }
 
             fn make_csv_buffer(&self) -> Vec<u8> {
                 let mut csv = Vec::new();
-                writeln!(csv, "This file was generated as output to Thermodynamic Models https://n.ethz.ch/~mkrummenache").unwrap();
-                writeln!(csv, "All extensive variable are divided by the number of lattice sites.").unwrap();
-                writeln!(csv, "Code for website: https://github.com/max-kay/thermo-online").unwrap();
-                writeln!(csv, "Rust library used for the simulation: https://github.com/max-kay/phases").unwrap();
-                writeln!(csv, "temperature,internal_energy,heat_capacity,acceptance_rate,entropy,free_energy").unwrap();
+                writeln!(
+                    csv,
+                    "This file was generated as output to Thermodynamic Models https://n.ethz.ch/~mkrummenache"
+                )
+                .expect("error writing csv header");
+                writeln!(
+                    csv,
+                    "All extensive variable are divided by the number of lattice sites."
+                )
+                .expect("error writing csv header");
+                writeln!(
+                    csv,
+                    "Code for website: https://github.com/max-kay/thermo-online"
+                )
+                .expect("error writing csv header");
+                writeln!(
+                    csv,
+                    "Rust library used for the simulation: https://github.com/max-kay/phases"
+                )
+                .expect("error writing csv header");
+                writeln!(
+                    csv,
+                    "temperature,internal_energy,heat_capacity,acceptance_rate,entropy,free_energy"
+                )
+                .expect("error writing csv header");
                 for i in 0..self.int_energy.len(){
                     writeln!(
                         csv,
@@ -225,30 +242,30 @@ macro_rules! makemodel {
                         self.acceptance_rate[i],
                         self.entropy[i],
                         self.free_energy[i],
-                    ).unwrap()
+                    ).expect("error writing cvs")
                 }
                 csv
             }
 
             fn make_model_params(&self, method: &str, temp_steps: u32, start_temp: f32, e_steps: u32, m_steps: u32) -> Vec<u8> {
                 let mut buf = Vec::new();
-                writeln!(buf, "Model Size: {}", $size).unwrap();
-                writeln!(buf, "Method: {}", method).unwrap();
-                writeln!(buf, "Energies: {}", self.system.get_energies_dict()).unwrap();
-                writeln!(buf, "Concentration A: {}, Concentration B: {}", self.c_0, self.c_1).unwrap();
-                writeln!(buf, "Temperature Steps: {}", temp_steps).unwrap();
-                writeln!(buf, "Start Temperature: {}", start_temp).unwrap();
-                writeln!(buf, "Steps for Equilibrium: {}", e_steps).unwrap();
-                writeln!(buf, "Steps for Measurement: {}", m_steps).unwrap();
+                writeln!(buf, "Model Size: {}", $size).expect("error creating model parms file");
+                writeln!(buf, "Method: {}", method).expect("error creating model parms file");
+                writeln!(buf, "Energies: {}", self.system.get_energies_dict()).expect("error creating model parms file");
+                writeln!(buf, "Concentration A: {}, Concentration B: {}", self.c_0, self.c_1).expect("error creating model parms file");
+                writeln!(buf, "Temperature Steps: {}", temp_steps).expect("error creating model parms file");
+                writeln!(buf, "Start Temperature: {}", start_temp).expect("error creating model parms file");
+                writeln!(buf, "Steps for Equilibrium: {}", e_steps).expect("error creating model parms file");
+                writeln!(buf, "Steps for Measurement: {}", m_steps).expect("error creating model parms file");
                 buf
             }
 
             pub fn get_zip_ptr(&self) -> *const u8 {
-                self.zip_data.as_ref().unwrap().as_ptr()
+                self.zip_data.as_ref().expect("zip data doesnt exist").as_ptr()
             }
 
             pub fn get_zip_len(&self) -> usize {
-                self.zip_data.as_ref().unwrap().len()
+                self.zip_data.as_ref().expect("zip data doesnt exist").len()
             }
 
             pub fn destory_zip_data(&mut self) {
