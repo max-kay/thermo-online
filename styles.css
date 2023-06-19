@@ -1,0 +1,191 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #333;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+}
+
+#top {
+    display: flex;
+    justify-content: center;
+    margin: 0px;
+    padding: 0px;
+}
+
+.boxed {
+    margin: 20px;
+    padding: 20px;
+    background-color: #444;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+#titles h1 {
+    font-size: 40px;
+    margin-bottom: 10px;
+    margin-top: 0px;
+}
+
+#titles p {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+a {
+    color: #999;
+}
+
+#modelSelection {
+    width: 60vw;
+    display: flex;
+    flex-direction: column;
+}
+
+.cols {
+    display: flex;
+}
+
+.col {
+    margin: 10px;
+    width: 50%;
+}
+
+
+#modelSelection label {
+    display: block;
+}
+
+#modelSelection select,
+#modelSelection input[type="number"] {
+    display: block;
+    margin-top: 4px;
+    padding: 4px;
+    font-size: 14px;
+    background-color: #555;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#modelSelection ul {
+    width: 100%;
+    display: flex;
+    float: left;
+    padding: 0%;
+}
+#spacer {
+    flex-grow: 1;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#modelSelection ul li input[type="number"] {
+    /* Firefox */
+    -moz-appearance: textfield;
+}
+
+#modelSelection ul li {
+    width: 30%;
+    float: left;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+#modelSelection ul.concentration li {
+    width: 45%;
+    float: left;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #3f8f42;
+}
+
+button:disabled {
+    background-color: gray;
+}
+
+#running {
+    display: none;
+}
+
+#progressBar {
+    height: 20px;
+    background-color: #555;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#progress {
+    height: 100%;
+    background-color: #4CAF50;
+    justify-content: center;
+}
+
+#modelOutput {
+    display: none;
+}
+
+#animation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#animationGif {
+    width: 50%;
+    image-rendering: pixelated;
+}
+
+#legend ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 5px;
+    float: left;
+}
+
+#legend li {
+    margin-left: 5px;
+    margin-right: 5px;
+    line-height: 18px;
+    margin-bottom: 2px;
+    float: left;
+}
+
+#legend li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
+}
+
+#energyTemp,
+#capacityTemp {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
