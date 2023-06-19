@@ -58,18 +58,6 @@
 /******/ 					"__wbg_alert_919a6b0cf649fb0d": function(p0i32,p1i32) {
 /******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_alert_919a6b0cf649fb0d"](p0i32,p1i32);
 /******/ 					},
-/******/ 					"__wbg_new_abda76e883ba8a5f": function() {
-/******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_new_abda76e883ba8a5f"]();
-/******/ 					},
-/******/ 					"__wbg_stack_658279fe44541cf6": function(p0i32,p1i32) {
-/******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_stack_658279fe44541cf6"](p0i32,p1i32);
-/******/ 					},
-/******/ 					"__wbg_error_f851667af71bcfc6": function(p0i32,p1i32) {
-/******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_error_f851667af71bcfc6"](p0i32,p1i32);
-/******/ 					},
-/******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
-/******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
-/******/ 					},
 /******/ 					"__wbg_crypto_c48a774b022d20ac": function(p0i32) {
 /******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_crypto_c48a774b022d20ac"](p0i32);
 /******/ 					},
@@ -81,6 +69,9 @@
 /******/ 					},
 /******/ 					"__wbg_versions_e2e78e134e3e5d01": function(p0i32) {
 /******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_versions_e2e78e134e3e5d01"](p0i32);
+/******/ 					},
+/******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
+/******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
 /******/ 					},
 /******/ 					"__wbg_node_1cd7a5d853dbea79": function(p0i32) {
 /******/ 						return installedModules["../pkg/thermo_online_bg.js"].exports["__wbg_node_1cd7a5d853dbea79"](p0i32);
@@ -258,7 +249,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/thermo_online_bg.wasm":"8d7da07be0e70f3e205e"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/thermo_online_bg.wasm":"66b00dfdf04bb7ee3a03"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
