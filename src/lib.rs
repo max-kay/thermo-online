@@ -1,4 +1,6 @@
-use phases::{Array2d, BinAtom as Atom, BinConcentration as Concentration, System};
+use phases::{
+    Array2d, BinAtom as Atom, BinConcentration as Concentration, ClusterDistribution, System,
+};
 use std::io::{Cursor, Write};
 use wasm_bindgen::prelude::*;
 use zip::write::{FileOptions, ZipWriter};
@@ -32,6 +34,213 @@ pub fn make_energies(j00: f32, j01: f32, j11: f32) -> Vec<f32> {
     vec![j00, j01, j01, j11]
 }
 
+struct ModelResults {
+    temp: Vec<f32>,
+    int_energy: Vec<f32>,
+    heat_capacity: Vec<f32>,
+    acceptance_rate: Vec<f32>,
+    entropy: Vec<f32>,
+    free_energy: Vec<f32>,
+    distr_0: Vec<ClusterDistribution>,
+    distr_1: Vec<ClusterDistribution>,
+    distrs_per_temp: u32,
+}
+
+impl ModelResults {
+    pub fn new(capacity: usize, distrs_per_temp: u32) -> Self {
+        Self {
+            temp: Vec::with_capacity(capacity),
+            int_energy: Vec::with_capacity(capacity),
+            heat_capacity: Vec::with_capacity(capacity),
+            acceptance_rate: Vec::with_capacity(capacity),
+            entropy: Vec::with_capacity(capacity),
+            free_energy: Vec::with_capacity(capacity),
+            distr_0: Vec::with_capacity(capacity),
+            distr_1: Vec::with_capacity(capacity),
+            distrs_per_temp,
+        }
+    }
+
+    pub fn push_temp(&mut self, value: f32) {
+        self.temp.push(value)
+    }
+    pub fn push_int_energy(&mut self, value: f32) {
+        self.int_energy.push(value)
+    }
+    pub fn push_heat_capacity(&mut self, value: f32) {
+        self.heat_capacity.push(value)
+    }
+    pub fn push_acceptance_rate(&mut self, value: f32) {
+        self.acceptance_rate.push(value)
+    }
+    pub fn push_distr_0(&mut self, value: ClusterDistribution) {
+        self.distr_0.push(value)
+    }
+    pub fn push_distr_1(&mut self, value: ClusterDistribution) {
+        self.distr_1.push(value)
+    }
+}
+impl ModelResults {
+    pub fn do_data_analysis(&mut self, ideal_entropy: f32) {
+        self.calc_entropy(ideal_entropy);
+        self.calc_free_energy();
+    }
+    fn calc_entropy(&mut self, ideal_entropy: f32) {
+        if !self.entropy.is_empty() {
+            self.entropy = Vec::with_capacity(self.heat_capacity.len());
+        }
+        self.entropy.push(ideal_entropy);
+        for i in 1..self.heat_capacity.len() {
+            let avg = (self.heat_capacity[i] / self.temp[i]
+                + self.heat_capacity[i - 1] / self.temp[i - 1])
+                / 2.0;
+            let last = *self.entropy.last().unwrap();
+            if avg.is_finite() {
+                self.entropy
+                    .push(last + (self.temp[i] - self.temp[i - 1]) * avg);
+            } else {
+                self.entropy.push(last)
+            }
+        }
+    }
+    fn calc_free_energy(&mut self) {
+        for i in 0..self.int_energy.len() {
+            self.free_energy
+                .push(self.int_energy[i] - self.temp[i] * self.entropy[i])
+        }
+    }
+}
+
+impl ModelResults {
+    pub fn len(&self) -> u32 {
+        self.temp.len() as u32
+    }
+
+    pub fn int_energy_ptr(&self) -> *const f32 {
+        self.int_energy.as_ptr()
+    }
+    pub fn temp_ptr(&self) -> *const f32 {
+        self.temp.as_ptr()
+    }
+    pub fn heat_capacity_ptr(&self) -> *const f32 {
+        self.heat_capacity.as_ptr()
+    }
+    pub fn acceptance_rate_ptr(&self) -> *const f32 {
+        self.acceptance_rate.as_ptr()
+    }
+    /// this function is not safe before calling `do_data_analysis`
+    pub fn entropy_ptr(&self) -> *const f32 {
+        self.entropy.as_ptr()
+    }
+    /// this function is not safe before calling `do_data_analysis`
+    pub fn free_energy_ptr(&self) -> *const f32 {
+        self.free_energy.as_ptr()
+    }
+}
+
+impl ModelResults {
+    fn make_csv_buffer(&self) -> std::io::Result<Vec<u8>> {
+        let mut csv = Vec::new();
+        writeln!(
+            csv,
+            "This file was generated as output to Thermodynamic Models https://max-kay.github.io/thermo-online/"
+        )?;
+        writeln!(
+            csv,
+            "All extensive variable are divided by the number of lattice sites."
+        )?;
+        writeln!(
+            csv,
+            "Code for website: https://github.com/max-kay/thermo-online"
+        )?;
+        writeln!(
+            csv,
+            "Rust library used for the simulation: https://github.com/max-kay/phases"
+        )?;
+        writeln!(
+            csv,
+            "temperature,internal_energy,heat_capacity,acceptance_rate,entropy,free_energy"
+        )?;
+        for i in 0..self.int_energy.len() {
+            writeln!(
+                csv,
+                "{},{},{},{},{},{},",
+                self.temp[i],
+                self.int_energy[i],
+                self.heat_capacity[i],
+                self.acceptance_rate[i],
+                self.entropy[i],
+                self.free_energy[i],
+            )?
+        }
+        Ok(csv)
+    }
+
+    fn make_json_buffer(&self) -> std::io::Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        writeln!(buf, "[")?;
+
+        writeln!(buf, "  {{")?;
+        writeln!(buf, "    \"atom\": \"A\",")?;
+        writeln!(buf, "    \"distributions\": [")?;
+        for (temp, distr) in self.temp.iter().zip(self.distr_0.iter()) {
+            writeln!(buf, "    {{")?;
+            writeln!(buf, "        \"temperature\": {},", temp)?;
+
+            writeln!(buf, "        \"distribution\": {{")?;
+            for (size, count) in distr.as_map().iter() {
+                writeln!(
+                    buf,
+                    "          \"{}\": {},",
+                    size,
+                    *count as f32 / self.distrs_per_temp as f32
+                )?;
+            }
+            remove_last_comma(&mut buf);
+            writeln!(buf, "      }}")?;
+
+            writeln!(buf, "    }},")?;
+        }
+        remove_last_comma(&mut buf);
+        writeln!(buf, "    ]")?;
+        writeln!(buf, "  }},")?;
+
+        writeln!(buf, "  {{")?;
+        writeln!(buf, "    \"atom\": \"B\",")?;
+        writeln!(buf, "    \"distributions\": [")?;
+        for (temp, distr) in self.temp.iter().zip(self.distr_1.iter()) {
+            writeln!(buf, "    {{")?;
+            writeln!(buf, "        \"temperature\": {},", temp)?;
+
+            writeln!(buf, "        \"distribution\": {{")?;
+            for (size, count) in distr.as_map().iter() {
+                writeln!(
+                    buf,
+                    "          \"{}\": {},",
+                    size,
+                    *count as f32 / self.distrs_per_temp as f32
+                )?;
+            }
+            remove_last_comma(&mut buf);
+            writeln!(buf, "      }}")?;
+
+            writeln!(buf, "    }},")?;
+        }
+        remove_last_comma(&mut buf);
+        writeln!(buf, "    ]")?;
+        writeln!(buf, "  }}")?;
+
+        writeln!(buf, "]")?;
+        Ok(buf)
+    }
+}
+
+fn remove_last_comma(buf: &mut Vec<u8>) {
+    buf.pop();
+    buf.pop();
+    write!(buf, "\n").unwrap();
+}
+
 macro_rules! makemodel {
     ($name:ident, $size:literal) => {
         #[wasm_bindgen]
@@ -39,12 +248,7 @@ macro_rules! makemodel {
             system: System<Array2d<Atom, $size, $size>, [f32; 4]>,
             method: fn(&mut System<Array2d<Atom, $size, $size>, [f32; 4]>, f32) -> bool,
             encoder: gif::Encoder<Vec<u8>>,
-            temp: Vec<f32>,
-            int_energy: Vec<f32>,
-            heat_capacity: Vec<f32>,
-            acceptance_rate: Vec<f32>,
-            entropy: Vec<f32>,
-            free_energy: Vec<f32>,
+            results: ModelResults,
             zip_data: Option<Vec<u8>>,
             c_0: f32,
             c_1: f32,
@@ -59,6 +263,7 @@ macro_rules! makemodel {
                 method: &str,
                 log_capacity: u32,
                 gif_delay: u16,
+                distrs_per_temp: u32,
             ) -> Self {
                 let method = match method {
                     "monte_carlo_swap" => System::monte_carlo_swap,
@@ -84,12 +289,7 @@ macro_rules! makemodel {
                     system: System::new(energies, None, Concentration::new(c_0, c_1)),
                     method,
                     encoder,
-                    temp: Vec::with_capacity(log_capacity as usize),
-                    int_energy: Vec::with_capacity(log_capacity as usize),
-                    heat_capacity: Vec::with_capacity(log_capacity as usize),
-                    acceptance_rate: Vec::with_capacity(log_capacity as usize),
-                    entropy: Vec::with_capacity(log_capacity as usize),
-                    free_energy: Vec::with_capacity(log_capacity as usize),
+                    results: ModelResults::new(log_capacity as usize, distrs_per_temp),
                     zip_data: None,
                 }
             }
@@ -100,162 +300,161 @@ macro_rules! makemodel {
                 measurement_steps: u32,
                 temp: f32,
                 frames: u32,
+                distrs_per_temp: u32,
             ) {
-                let tot_steps = measurement_steps * $size * $size;
-                self.temp.push(temp);
+                self.results.push_temp(temp);
                 for _ in 0..equilibrium_steps * $size * $size {
                     (self.method)(&mut self.system, 1.0 / temp);
                 }
 
-                let mut stats = phases::StreamingVariance::new();
+                let mut stats = phases::StreamingStats::new();
                 let mut accepted = 0;
+                let tot_steps = measurement_steps * $size * $size;
+                let mut distr_0 = ClusterDistribution::new();
+                let mut distr_1 = ClusterDistribution::new();
                 for k in 0..tot_steps {
                     accepted += (self.method)(&mut self.system, 1.0 / temp) as u32;
                     stats.add_value(self.system.internal_energy());
                     if k % (tot_steps / frames) == 0 {
                         let frame = self.system.get_frame();
-                        self.encoder.write_frame(&frame).expect("gif should be writable");
+                        self.encoder
+                            .write_frame(&frame)
+                            .expect("gif should be writable");
+                    }
+                    if k % (tot_steps / distrs_per_temp) == 0 {
+                        distr_0.combine(&self.system.count_clusters(Atom::new(0)));
+                        distr_1.combine(&self.system.count_clusters(Atom::new(1)));
                     }
                 }
-                self.int_energy.push(stats.avg() / ($size * $size) as f32);
-                self.heat_capacity
-                    .push(stats.variance() / (temp * temp) / ($size * $size) as f32);
-                self.acceptance_rate
-                    .push(accepted as f32 / tot_steps as f32);
+                self.results
+                    .push_int_energy(stats.avg() / ($size * $size) as f32);
+                self.results
+                    .push_heat_capacity(stats.variance() / (temp * temp) / ($size * $size) as f32);
+                self.results
+                    .push_acceptance_rate(accepted as f32 / tot_steps as f32);
+                self.results.push_distr_0(distr_0);
+                self.results.push_distr_1(distr_1);
             }
 
             pub fn do_data_analysis(&mut self) {
-                self.calc_entropy();
-                self.calc_free_energy();
-            }
-
-            fn calc_entropy(&mut self) {
-                if !self.entropy.is_empty() {
-                    self.entropy = Vec::with_capacity(self.heat_capacity.len());
-                }
-                for i in 1..self.heat_capacity.len() {
-                    let avg = (self.heat_capacity[i-1] / self.temp[i-1]
-                         + self.heat_capacity[i] / self.temp[i])
-                         / 2.0;
-                    let last = self.entropy.last().copied().unwrap_or(-(self.c_0.ln() * self.c_0 + self.c_1.ln() * self.c_1));
-                    if avg.is_finite() {
-                        self.entropy.push(last + (self.temp[i] - self.temp[i-1]) * avg);
-                    } else {
-                        self.entropy.push(last)
-                    }
-                }
-                let last = self.entropy.last().expect("should have at least one element.");
-                self.entropy.push(*last)
-            }
-
-            fn calc_free_energy(&mut self) {
-                for i in 0..self.int_energy.len() {
-                    self.free_energy.push(self.int_energy[i]-self.temp[i]*self.entropy[i])
-                }
+                self.results
+                    .do_data_analysis(-(self.c_0.ln() * self.c_0 + self.c_1.ln() * self.c_1))
             }
         }
 
         #[wasm_bindgen]
         impl $name {
             pub fn log_len(&self) -> u32 {
-                self.int_energy.len() as u32
+                self.results.len() as u32
             }
 
             pub fn int_energy_ptr(&self) -> *const f32 {
-                self.int_energy.as_ptr()
+                self.results.int_energy_ptr()
             }
             pub fn temp_ptr(&self) -> *const f32 {
-                self.temp.as_ptr()
+                self.results.temp_ptr()
             }
             pub fn heat_capacity_ptr(&self) -> *const f32 {
-                self.heat_capacity.as_ptr()
+                self.results.heat_capacity_ptr()
             }
             pub fn acceptance_rate_ptr(&self) -> *const f32 {
-                self.acceptance_rate.as_ptr()
+                self.results.acceptance_rate_ptr()
             }
             /// this function is not safe before calling `do_data_analysis`
             pub fn entropy_ptr(&self) -> *const f32 {
-                self.entropy.as_ptr()
+                self.results.entropy_ptr()
             }
             /// this function is not safe before calling `do_data_analysis`
             pub fn free_energy_ptr(&self) -> *const f32 {
-                self.free_energy.as_ptr()
+                self.results.free_energy_ptr()
             }
         }
 
         #[wasm_bindgen]
         impl $name {
-            pub fn make_zip(&mut self, method: &str, temp_steps: u32, start_temp: f32, e_steps: u32, m_steps: u32) {
+            pub fn make_zip(
+                &mut self,
+                method: &str,
+                temp_steps: u32,
+                start_temp: f32,
+                e_steps: u32,
+                m_steps: u32,
+            ) {
                 let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
                 let options = FileOptions::default()
-                                    .compression_method(zip::CompressionMethod::Deflated)
-                                    .unix_permissions(0o755);
-                zip.start_file("animation.gif", options).expect("error creating zip");
-                zip.write_all(&self.encoder.get_ref()).expect("error creating zip");
-                zip.start_file("model_output.csv", options).expect("error creating zip");
-                zip.write_all(&self.make_csv_buffer()).expect("error creating zip");
-                zip.start_file("model_params.txt", options).expect("error creating zip");
-                zip.write_all(&self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps)).expect("error creating zip");
+                    .compression_method(zip::CompressionMethod::Deflated)
+                    .unix_permissions(0o755);
+
+                zip.start_file("animation.gif", options)
+                    .expect("error creating zip");
+                zip.write_all(&self.encoder.get_ref())
+                    .expect("error creating zip");
+
+                zip.start_file("model_output.csv", options)
+                    .expect("error creating zip");
+                zip.write_all(
+                    &self
+                        .results
+                        .make_csv_buffer()
+                        .expect("creating csv should be infallable"),
+                )
+                .expect("error creating zip");
+
+                zip.start_file("model_params.txt", options)
+                    .expect("error creating zip");
+                zip.write_all(
+                    &self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps),
+                )
+                .expect("error creating zip");
+
+                zip.start_file("distributions.json", options)
+                    .expect("error creating zip");
+                zip.write_all(
+                    &self
+                        .results
+                        .make_json_buffer()
+                        .expect("error creating distribution json"),
+                )
+                .expect("error creating zip");
+
                 self.zip_data = Some(zip.finish().expect("error creating zip").into_inner());
             }
 
-            fn make_csv_buffer(&self) -> Vec<u8> {
-                let mut csv = Vec::new();
-                writeln!(
-                    csv,
-                    "This file was generated as output to Thermodynamic Models https://max-kay.github.io/thermo-online/"
-                )
-                .expect("error writing csv header");
-                writeln!(
-                    csv,
-                    "All extensive variable are divided by the number of lattice sites."
-                )
-                .expect("error writing csv header");
-                writeln!(
-                    csv,
-                    "Code for website: https://github.com/max-kay/thermo-online"
-                )
-                .expect("error writing csv header");
-                writeln!(
-                    csv,
-                    "Rust library used for the simulation: https://github.com/max-kay/phases"
-                )
-                .expect("error writing csv header");
-                writeln!(
-                    csv,
-                    "temperature,internal_energy,heat_capacity,acceptance_rate,entropy,free_energy"
-                )
-                .expect("error writing csv header");
-                for i in 0..self.int_energy.len(){
-                    writeln!(
-                        csv,
-                        "{},{},{},{},{},{},",
-                        self.temp[i],
-                        self.int_energy[i],
-                        self.heat_capacity[i],
-                        self.acceptance_rate[i],
-                        self.entropy[i],
-                        self.free_energy[i],
-                    ).expect("error writing cvs")
-                }
-                csv
-            }
-
-            fn make_model_params(&self, method: &str, temp_steps: u32, start_temp: f32, e_steps: u32, m_steps: u32) -> Vec<u8> {
+            fn make_model_params(
+                &self,
+                method: &str,
+                temp_steps: u32,
+                start_temp: f32,
+                e_steps: u32,
+                m_steps: u32,
+            ) -> Vec<u8> {
                 let mut buf = Vec::new();
                 writeln!(buf, "Model Size: {}", $size).expect("error creating model parms file");
                 writeln!(buf, "Method: {}", method).expect("error creating model parms file");
-                writeln!(buf, "Energies: {}", self.system.get_energies_dict()).expect("error creating model parms file");
-                writeln!(buf, "Concentration A: {}, Concentration B: {}", self.c_0, self.c_1).expect("error creating model parms file");
-                writeln!(buf, "Temperature Steps: {}", temp_steps).expect("error creating model parms file");
-                writeln!(buf, "Start Temperature: {}", start_temp).expect("error creating model parms file");
-                writeln!(buf, "Steps for Equilibrium: {}", e_steps).expect("error creating model parms file");
-                writeln!(buf, "Steps for Measurement: {}", m_steps).expect("error creating model parms file");
+                writeln!(buf, "Energies: {}", self.system.get_energies_dict())
+                    .expect("error creating model parms file");
+                writeln!(
+                    buf,
+                    "Concentration A: {}, Concentration B: {}",
+                    self.c_0, self.c_1
+                )
+                .expect("error creating model parms file");
+                writeln!(buf, "Temperature Steps: {}", temp_steps)
+                    .expect("error creating model parms file");
+                writeln!(buf, "Start Temperature: {}", start_temp)
+                    .expect("error creating model parms file");
+                writeln!(buf, "Steps for Equilibrium: {}", e_steps)
+                    .expect("error creating model parms file");
+                writeln!(buf, "Steps for Measurement: {}", m_steps)
+                    .expect("error creating model parms file");
                 buf
             }
 
             pub fn get_zip_ptr(&self) -> *const u8 {
-                self.zip_data.as_ref().expect("zip data doesnt exist").as_ptr()
+                self.zip_data
+                    .as_ref()
+                    .expect("zip data doesnt exist")
+                    .as_ptr()
             }
 
             pub fn get_zip_len(&self) -> usize {

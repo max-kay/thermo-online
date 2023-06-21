@@ -39,6 +39,7 @@ let startTemp = 8.0;
 let eSteps = 100;
 let mSteps = 100;
 let nFrames = 3;
+let distrPerTemp = 1;
 let cA;
 let cB;
 let method;
@@ -127,15 +128,15 @@ function setUiOutput() {
 function runSimulation() {
     model = undefined;
     readInputs();
-    setUiRunning()
+    setUiRunning();
     nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
-    model = Model.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100));
+    model = Model.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100), distrPerTemp);
 
     function animateSimulation(i) {
         if (i < tempSteps) {
             const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
-            model.run_at_temp(eSteps, mSteps, temp, nFrames);
+            model.run_at_temp(eSteps, mSteps, temp, nFrames, distrPerTemp);
             gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
             i++;
             requestAnimationFrame(() => animateSimulation(i));
