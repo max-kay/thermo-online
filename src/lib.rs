@@ -177,6 +177,12 @@ impl ModelResults {
     }
 
     fn make_json_buffer(&self) -> std::io::Result<Vec<u8>> {
+        fn remove_last_comma(buf: &mut Vec<u8>) {
+            buf.pop();
+            buf.pop();
+            write!(buf, "\n").unwrap();
+        }
+
         let mut buf = Vec::new();
         writeln!(buf, "[")?;
 
@@ -233,12 +239,6 @@ impl ModelResults {
         writeln!(buf, "]")?;
         Ok(buf)
     }
-}
-
-fn remove_last_comma(buf: &mut Vec<u8>) {
-    buf.pop();
-    buf.pop();
-    write!(buf, "\n").unwrap();
 }
 
 macro_rules! makemodel {
@@ -487,8 +487,8 @@ macro_rules! makemodel {
     };
 }
 
-makemodel!(XBigModel, 256);
-makemodel!(BigModel, 128);
-makemodel!(MediumModel, 64);
-makemodel!(SmallModel, 32);
 makemodel!(XSmallModel, 16);
+makemodel!(SmallModel, 32);
+makemodel!(MediumModel, 64);
+makemodel!(BigModel, 128);
+makemodel!(XBigModel, 256);
