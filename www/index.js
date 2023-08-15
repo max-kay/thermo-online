@@ -1,52 +1,24 @@
-import { XSmallModel, SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies, start_logs } from "thermo-online";
+import { XSmallModel, SmallModel, MediumModel, BigModel, XBigModel, get_color, make_energies } from "thermo-online";
 import { memory } from "thermo-online/thermo_online_bg";
 import { gsap } from "gsap";
 import Plotly from "plotly.js-dist-min";
 
-const PLOTLY_LAYOUT = {
-    xaxis: {
-        color: '#FFFFFF',
-        tickfont: {
-            color: '#FFFFFF'
-        }
-    },
-    yaxis: {
-        color: '#FFFFFF',
-        tickfont: {
-            color: '#FFFFFF'
-        }
-    },
-    plot_bgcolor: '#555',
-    paper_bgcolor: '#444',
-    margin: {
-        l: 50,
-        r: 20,
-        t: 20,
-        b: 50,
-    },
-    padding: {
-        l: 10,
-        r: 10,
-        t: 10,
-        b: 10,
-    }
-};
 
 const GIF_DURATION = 10.0;
 
-let tempSteps = 10;
-let startTemp = 8.0;
-let eSteps = 100;
-let mSteps = 100;
-let nFrames = 3;
 let distrPerTemp = 1;
+let tempSteps;
+let startTemp;
+let eSteps;
+let mSteps;
+let nFrames;
 let cA;
 let cB;
 let method;
 let energies;
 
-let Model;
-let model;
+let ModelType;
+let modelInstance;
 
 
 // update colors for legend
@@ -68,45 +40,25 @@ function readInputs() {
     cB = parseFloat(document.getElementById("cB").value);
     switch (parseInt(document.getElementById('modelSize').value)) {
         case 16:
-            Model = XSmallModel;
+            ModelType = XSmallModel;
             break;
         case 32:
-            Model = SmallModel;
+            ModelType = SmallModel;
             break;
         case 64:
-            Model = MediumModel;
+            ModelType = MediumModel;
             break;
         case 128:
-            Model = BigModel;
+            ModelType = BigModel;
             break;
         case 256:
-            Model = XBigModel;
+            ModelType = XBigModel;
             break;
         default:
             console.log("failed to assign model, using SmallModel");
             console.log("modelSize: " + modelSize);
-            Model = SmallModel
+            ModelType = SmallModel
     }
-}
-
-function plot(id, xs, ys, x_title, y_title) {
-    const trace1 = {
-        x: xs,
-        y: ys,
-    };
-
-    const l1 = {
-        ...PLOTLY_LAYOUT,
-        xaxis: {
-            ...PLOTLY_LAYOUT.xaxis,
-            title: x_title,
-        },
-        yaxis: {
-            ...PLOTLY_LAYOUT.yaxis,
-            title: y_title,
-        },
-    };
-    Plotly.newPlot(id, [trace1], l1);
 }
 
 function setUiRunning() {
@@ -126,26 +78,31 @@ function setUiOutput() {
 }
 
 function runSimulation() {
-    model = undefined;
+    modelInstance = undefined;
     readInputs();
     setUiRunning();
     nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
-    model = Model.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100), distrPerTemp);
+    modelInstance = ModelType.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100), distrPerTemp);
 
     function animateSimulation(i) {
         if (i < tempSteps) {
             const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
-            model.run_at_temp(eSteps, mSteps, temp, nFrames, distrPerTemp);
+            modelInstance.run_at_temp(eSteps, mSteps, temp, nFrames, distrPerTemp);
             gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
             i++;
             requestAnimationFrame(() => animateSimulation(i));
         } else {
-            model.do_data_analysis();
+            modelInstance.do_data_analysis();
             console.log("simulation done")
-            setGif();
-            makePlots();
-            setUiOutput();
+            requestAnimationFrame(() => {
+                setUiOutput();
+                setGif();
+            });
+
+            requestAnimationFrame(
+                makePlots
+            );
         }
     }
     console.log("simulation started")
@@ -153,9 +110,7 @@ function runSimulation() {
 }
 
 function setGif() {
-    const gifLen = model.gif_len();
-    const gifPtr = model.gif_ptr();
-    const gifData = new Uint8Array(memory.buffer, gifPtr, gifLen);
+    const gifData = new Uint8Array(memory.buffer, modelInstance.gif_ptr(), modelInstance.gif_len());
     let blob = new Blob([gifData], { type: "image/gif" });
     let url = URL.createObjectURL(blob);
     let img = document.getElementById("animationGif");
@@ -163,25 +118,106 @@ function setGif() {
 }
 
 function makePlots() {
-    const temp = new Float32Array(memory.buffer, model.temp_ptr(), model.log_len());
-    const energy = new Float32Array(memory.buffer, model.int_energy_ptr(), model.log_len());
-    const heat_capacity = new Float32Array(memory.buffer, model.heat_capacity_ptr(), model.log_len());
-    const entropy = new Float32Array(memory.buffer, model.entropy_ptr(), model.log_len());
-    const free_energy = new Float32Array(memory.buffer, model.free_energy_ptr(), model.log_len());
-    const acceptance = new Float32Array(memory.buffer, model.acceptance_rate_ptr(), model.log_len());
+    const LINE_COLOR = '#000000';
 
-    plot("energyTemp", temp, energy, "Temperature", "Energy (pL)");
-    plot("capacityTemp", temp, heat_capacity, "Temperature", "Heat Capacity (pL)");
-    plot("acceptanceTemp", temp, acceptance, "Temperature", "Acceptance Rate");
-    plot("entropyTemp", temp, entropy, "Temperature", "Entropy (pL)");
-    plot("freeTemp", temp, free_energy, "Temperature", "Free Energy (pL)");
+    const temp = new Float32Array(memory.buffer, modelInstance.temp_ptr(), modelInstance.log_len());
+    let data = [];
+
+    function generateAxisLayout(title) {
+        return {
+            color: '#FFFFFF',
+            tickfont: {
+                color: '#FFFFFF'
+            },
+            title: title,
+            automargin: true,
+        };
+    }
+    width = document.getElementById("plot").offsetWidth
+    console.log(width)
+
+    let layout = {
+        autosize: false,
+        responsive: true,
+        plot_bgcolor: '#555',
+        paper_bgcolor: '#444',
+        grid: {
+            rows: 3,
+            columns: 2,
+            pattern: 'independent'
+        },
+        showlegend: false,
+        width: width,
+        // height: 500,
+        // margin: 80
+    };
+
+    data.push({
+        x: temp,
+        y: new Float32Array(memory.buffer, modelInstance.int_energy_ptr(), modelInstance.log_len()),
+        line: {
+            color: LINE_COLOR
+        },
+        xaxis: "x",
+        yaxis: "y",
+    })
+    layout.xaxis = generateAxisLayout("Temperature");
+    layout.yaxis = generateAxisLayout("Internal Energy");
+
+    data.push({
+        x: temp,
+        y: new Float32Array(memory.buffer, modelInstance.heat_capacity_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        line: {
+            color: LINE_COLOR
+        }
+    })
+    layout.xaxis2 = generateAxisLayout("Temperature");
+    layout.yaxis2 = generateAxisLayout("Heat Capacity");
+
+    data.push({
+        x: temp,
+        y: new Float32Array(memory.buffer, modelInstance.acceptance_rate_ptr(), modelInstance.log_len()),
+        xaxis: "x3",
+        yaxis: "y3",
+        line: {
+            color: LINE_COLOR
+        }
+    })
+    layout.xaxis3 = generateAxisLayout("Temperature");
+    layout.yaxis3 = generateAxisLayout("Acceptance Rate");
+
+    data.push({
+        x: temp,
+        y: new Float32Array(memory.buffer, modelInstance.entropy_ptr(), modelInstance.log_len()),
+        xaxis: "x4",
+        yaxis: "y4",
+        line: {
+            color: LINE_COLOR
+        }
+    })
+    layout.xaxis4 = generateAxisLayout("Temperature");
+    layout.yaxis4 = generateAxisLayout("Entropy");
+
+    data.push({
+        x: temp,
+        y: new Float32Array(memory.buffer, modelInstance.free_energy_ptr(), modelInstance.log_len()),
+        xaxis: "x5",
+        yaxis: "y5",
+        line: {
+            color: LINE_COLOR
+        }
+    })
+    layout.xaxis5 = generateAxisLayout("Temperature");
+    layout.yaxis5 = generateAxisLayout("Free Energy");
+
+    Plotly.newPlot("plots", data, layout, { responsive: true });
 }
 
 function getZip() {
-    model.make_zip(method, tempSteps, startTemp, eSteps, mSteps);
-    const ptr = model.get_zip_ptr();
-    const len = model.get_zip_len();
-    const zipData = new Uint8Array(memory.buffer, ptr, len);
+    modelInstance.make_zip(method, tempSteps, startTemp, eSteps, mSteps);
+    const zipData = new Uint8Array(memory.buffer, modelInstance.get_zip_ptr(), modelInstance.get_zip_len());
     const blob = new Blob([zipData], { type: 'applications/zip' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -190,7 +226,7 @@ function getZip() {
     link.click();
 
     URL.revokeObjectURL(url)
-    model.destory_zip_data()
+    modelInstance.destory_zip_data()
 }
 
 

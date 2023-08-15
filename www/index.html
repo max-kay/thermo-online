@@ -27,7 +27,8 @@
             </ul>
             <p>This model conducts a simple quenching simulation from the <i>Start Temperature</i> to 0. The
                 <i>Temperature
-                    Steps</i> parameter determines the number of steps for this cooling process.</p>
+                    Steps</i> parameter determines the number of steps for this cooling process.
+            </p>
             <p>The <i>Steps for Equilibrium</i> parameter specifies the number of steps the model runs at each
                 temperature before
                 any measurement is made. The <i>Steps for Measurement</i> parameter determines the number of steps over
@@ -118,17 +119,7 @@
                 <li><span class="color1"></span> Atom B </li>
             </ul>
         </div>
-        <div class="cols">
-            <div id="energyTemp" class="col"></div>
-            <div id="capacityTemp" class="col"></div>
-        </div>
-        <div class="cols">
-            <div id="acceptanceTemp" class="col"></div>
-            <div id="entropyTemp" class="col"></div>
-        </div>
-        <div class="cols">
-            <div id="freeTemp" class="col"></div>
-        </div>
+        <div id="plots"></div>
         <button onclick="getZip()" id="zip">Download all data as .zip</button>
     </div>
     <script src="./bootstrap.js"></script>
