@@ -6,7 +6,7 @@ import Plotly from "plotly.js-dist-min";
 
 const GIF_DURATION = 10.0;
 
-let distrPerTemp = 1;
+let distrPerTemp = 100;
 let tempSteps;
 let startTemp;
 let eSteps;
@@ -62,19 +62,16 @@ function readInputs() {
 }
 
 function setUiRunning() {
-    requestAnimationFrame(() => {
-        gsap.to("#run", { disabled: true, duration: 0 })
-        gsap.to("#modelOutput", { display: "none", duration: 0 })
-        gsap.to("#running", { display: "block", duration: 0 })
-        gsap.to("#progress", { width: "0%", duration: 0 })
-    })
+    gsap.to("#run", { disabled: true, duration: 0 })
+    gsap.to("#modelOutput", { display: "none", duration: 0 })
+    gsap.to("#running", { display: "block", duration: 0 })
+    gsap.to("#progress", { width: "0%", duration: 0 })
 }
 function setUiOutput() {
-    requestAnimationFrame(() => {
-        gsap.to("#run", { disabled: false, innerHTML: "Rerun", duration: 0.01 })
-        gsap.to("#modelOutput", { display: "block", duration: 0.01 })
-        gsap.to("#running", { display: "none", duration: 0.02 })
-    })
+    gsap.to("#run", { disabled: false, innerHTML: "Rerun", duration: 0.01 })
+    gsap.to("#modelOutput", { display: "block", duration: 0.01 })
+    gsap.to("#running", { display: "none", duration: 0.02 })
+
 }
 
 function runSimulation() {
@@ -95,14 +92,12 @@ function runSimulation() {
         } else {
             modelInstance.do_data_analysis();
             console.log("simulation done")
-            requestAnimationFrame(() => {
-                setUiOutput();
-                setGif();
-            });
-
-            requestAnimationFrame(
-                makePlots
-            );
+            setUiOutput();
+            setGif();
+            setTimeout(() => {
+                makePlots();
+                makeBlockPlots();
+            }, 100)
         }
     }
     console.log("simulation started")
@@ -117,11 +112,13 @@ function setGif() {
     img.src = url;
 }
 
-function makePlots() {
-    const LINE_COLOR = '#000000';
+const MAIN_COLOR = "#fd7f6f";
+const S_COLOR = "#7eb0d5";
+const T_COLOR = "#b2e061";
 
+function makePlots() {
     const temp = new Float32Array(memory.buffer, modelInstance.temp_ptr(), modelInstance.log_len());
-    let data = [];
+    let traces = [];
 
     function generateAxisLayout(title) {
         return {
@@ -133,11 +130,9 @@ function makePlots() {
             automargin: true,
         };
     }
-    width = document.getElementById("plot").offsetWidth
-    console.log(width)
 
     let layout = {
-        autosize: false,
+        autosize: true,
         responsive: true,
         plot_bgcolor: '#555',
         paper_bgcolor: '#444',
@@ -147,72 +142,265 @@ function makePlots() {
             pattern: 'independent'
         },
         showlegend: false,
-        width: width,
-        // height: 500,
-        // margin: 80
+        height: 1000,
+        margin: 80
     };
 
-    data.push({
+    traces.push({
         x: temp,
         y: new Float32Array(memory.buffer, modelInstance.int_energy_ptr(), modelInstance.log_len()),
         line: {
-            color: LINE_COLOR
+            color: MAIN_COLOR
         },
         xaxis: "x",
         yaxis: "y",
     })
     layout.xaxis = generateAxisLayout("Temperature");
-    layout.yaxis = generateAxisLayout("Internal Energy");
+    layout.yaxis = generateAxisLayout("Internal Energy [pL]");
 
-    data.push({
+    traces.push({
         x: temp,
         y: new Float32Array(memory.buffer, modelInstance.heat_capacity_ptr(), modelInstance.log_len()),
         xaxis: "x2",
         yaxis: "y2",
         line: {
-            color: LINE_COLOR
+            color: MAIN_COLOR
         }
     })
     layout.xaxis2 = generateAxisLayout("Temperature");
-    layout.yaxis2 = generateAxisLayout("Heat Capacity");
+    layout.yaxis2 = generateAxisLayout("Heat Capacity [pL]");
 
-    data.push({
+    traces.push({
         x: temp,
         y: new Float32Array(memory.buffer, modelInstance.acceptance_rate_ptr(), modelInstance.log_len()),
         xaxis: "x3",
         yaxis: "y3",
         line: {
-            color: LINE_COLOR
+            color: MAIN_COLOR
         }
     })
     layout.xaxis3 = generateAxisLayout("Temperature");
     layout.yaxis3 = generateAxisLayout("Acceptance Rate");
 
-    data.push({
+    traces.push({
         x: temp,
         y: new Float32Array(memory.buffer, modelInstance.entropy_ptr(), modelInstance.log_len()),
         xaxis: "x4",
         yaxis: "y4",
         line: {
-            color: LINE_COLOR
+            color: MAIN_COLOR
         }
     })
     layout.xaxis4 = generateAxisLayout("Temperature");
-    layout.yaxis4 = generateAxisLayout("Entropy");
+    layout.yaxis4 = generateAxisLayout("Entropy [pL]");
 
-    data.push({
+    traces.push({
         x: temp,
         y: new Float32Array(memory.buffer, modelInstance.free_energy_ptr(), modelInstance.log_len()),
         xaxis: "x5",
         yaxis: "y5",
         line: {
-            color: LINE_COLOR
+            color: MAIN_COLOR
         }
     })
     layout.xaxis5 = generateAxisLayout("Temperature");
-    layout.yaxis5 = generateAxisLayout("Free Energy");
+    layout.yaxis5 = generateAxisLayout("Free Energy [pL]");
 
-    Plotly.newPlot("plots", data, layout, { responsive: true });
+    var config = { responsive: true }
+    Plotly.newPlot("plots", traces, layout, config);
+}
+
+function makeBlockPlots() {
+    const temp = new Float32Array(memory.buffer, modelInstance.temp_ptr(), modelInstance.log_len());
+    
+    var config = { responsive: true }
+    let layout = {
+        xaxis: {
+            domain: [0, 0.45],
+            color: '#FFFFFF',
+            tickfont: {
+                color: '#FFFFFF'
+            },
+            title: "Temperature",
+            automargin: true,
+        },
+        yaxis: {
+            domain: [0, .9],
+            color: '#FFFFFF',
+            tickfont: {
+                color: '#FFFFFF'
+            },
+            title: "Blocksize",
+            automargin: true,
+        },
+        xaxis2: {
+            domain: [0.55, 1],
+            color: '#FFFFFF',
+            tickfont: {
+                color: '#FFFFFF'
+            },
+            title: "Temperature",
+            automargin: true,
+        },
+        yaxis2: {
+            anchor: 'x2',
+            domain: [0, .9],
+            color: '#FFFFFF',
+            tickfont: {
+                color: '#FFFFFF'
+            },
+            title: "Block Size",
+            automargin: true,
+        },
+        autosize: true,
+        responsive: true,
+        title: {
+            text: "Block Size Statistics",
+            font: { color: "#fff" }
+        },
+        plot_bgcolor: '#555',
+        paper_bgcolor: '#444',
+        grid: {
+            rows: 1,
+            columns: 2,
+            pattern: 'independent'
+        },
+        showlegend: false,
+        height: 600,
+        margin: 80,
+        annotations: [{
+            text: "Atom A",
+            font: {
+                size: 16,
+                color: '#fff',
+            },
+            showarrow: false,
+            align: 'center',
+            x: 0.2,
+            y: 1,
+            xref: 'paper',
+            yref: 'paper',
+        },
+        {
+            text: "Atom B",
+            font: {
+                size: 16,
+                color: '#fff',
+            },
+            showarrow: false,
+            align: 'center',
+            x: 0.8,
+            y: 1,
+            xref: 'paper',
+            yref: 'paper',
+        }
+        ]
+    };
+    let traces = [];
+
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_0_min_ptr(), modelInstance.log_len()),
+        xaxis: "x1",
+        yaxis: "y1",
+        name: "minimum",
+        line: {
+            color: T_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_0_q1_ptr(), modelInstance.log_len()),
+        xaxis: "x1",
+        yaxis: "y1",
+        name: "first quartile",
+        line: {
+            color: S_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_0_mean_ptr(), modelInstance.log_len()),
+        xaxis: "x1",
+        yaxis: "y1",
+        name: "median",
+        line: {
+            color: MAIN_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_0_q3_ptr(), modelInstance.log_len()),
+        xaxis: "x1",
+        yaxis: "y1",
+        name: "third quartile",
+        line: {
+            color: S_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_0_max_ptr(), modelInstance.log_len()),
+        xaxis: "x1",
+        yaxis: "y1",
+        name: "maximum",
+        line: {
+            color: T_COLOR
+        }
+    })
+
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_1_min_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        name:"minimum",
+        line: {
+            color: T_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_1_q1_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        name: "first quartile",
+        line: {
+            color: S_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_1_mean_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        name: "median",
+        line: {
+            color: MAIN_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_1_q3_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        name: "third quartile",
+        line: {
+            color: S_COLOR
+        }
+    })
+    traces.push({
+        x: temp,
+        y: new Uint32Array(memory.buffer, modelInstance.cs_1_max_ptr(), modelInstance.log_len()),
+        xaxis: "x2",
+        yaxis: "y2",
+        name: "maximum",
+        line: {
+            color: T_COLOR
+        }
+    })
+
+    Plotly.newPlot("blockstats", traces, layout, config);
 }
 
 function getZip() {

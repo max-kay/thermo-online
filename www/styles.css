@@ -18,6 +18,10 @@ body {
     padding: 0px;
 }
 
+.centered {
+    text-align: center;
+}
+
 .boxed {
     margin: 20px;
     padding: 20px;

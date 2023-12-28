@@ -1,5 +1,6 @@
 use phases::{
-    Array2d, BinAtom as Atom, BinConcentration as Concentration, ClusterDistribution, System,
+    disentangle, BinAtom as Atom, BinConcentration as Concentration, ClusterDistribution,
+    ClusterStats, FastArray, System,
 };
 use std::io::{Cursor, Write};
 use wasm_bindgen::prelude::*;
@@ -35,14 +36,16 @@ pub fn make_energies(j00: f32, j01: f32, j11: f32) -> Vec<f32> {
 }
 
 struct ModelResults {
-    temp: Vec<f32>,
-    int_energy: Vec<f32>,
-    heat_capacity: Vec<f32>,
-    acceptance_rate: Vec<f32>,
-    entropy: Vec<f32>,
-    free_energy: Vec<f32>,
+    pub temp: Vec<f32>,
+    pub int_energy: Vec<f32>,
+    pub heat_capacity: Vec<f32>,
+    pub acceptance_rate: Vec<f32>,
+    pub entropy: Vec<f32>,
+    pub free_energy: Vec<f32>,
     distr_0: Vec<ClusterDistribution>,
     distr_1: Vec<ClusterDistribution>,
+    pub cluster_stats_0: [Vec<u32>; 5],
+    pub cluster_stats_1: [Vec<u32>; 5],
     distrs_per_temp: u32,
 }
 
@@ -57,6 +60,8 @@ impl ModelResults {
             free_energy: Vec::with_capacity(capacity),
             distr_0: Vec::with_capacity(capacity),
             distr_1: Vec::with_capacity(capacity),
+            cluster_stats_0: Default::default(),
+            cluster_stats_1: Default::default(),
             distrs_per_temp,
         }
     }
@@ -84,7 +89,29 @@ impl ModelResults {
     pub fn do_data_analysis(&mut self, ideal_entropy: f32) {
         self.calc_entropy(ideal_entropy);
         self.calc_free_energy();
+        self.cluster_stats_0 = disentangle(
+            self.distr_0
+                .iter()
+                .map(ClusterStats::from_map_atom)
+                .collect(),
+        );
+        for list in self.cluster_stats_0[0]
+            .iter()
+            .zip(self.cluster_stats_0[1].iter())
+            .zip(self.cluster_stats_0[2].iter())
+            .zip(self.cluster_stats_0[3].iter())
+            .zip(self.cluster_stats_0[4].iter())
+        {
+            console!("{:?}", list);
+        }
+        self.cluster_stats_1 = disentangle(
+            self.distr_1
+                .iter()
+                .map(ClusterStats::from_map_atom)
+                .collect(),
+        );
     }
+
     fn calc_entropy(&mut self, ideal_entropy: f32) {
         if !self.entropy.is_empty() {
             self.entropy = Vec::with_capacity(self.heat_capacity.len());
@@ -103,6 +130,7 @@ impl ModelResults {
             }
         }
     }
+
     fn calc_free_energy(&mut self) {
         for i in 0..self.int_energy.len() {
             self.free_energy
@@ -114,27 +142,6 @@ impl ModelResults {
 impl ModelResults {
     pub fn len(&self) -> u32 {
         self.temp.len() as u32
-    }
-
-    pub fn int_energy_ptr(&self) -> *const f32 {
-        self.int_energy.as_ptr()
-    }
-    pub fn temp_ptr(&self) -> *const f32 {
-        self.temp.as_ptr()
-    }
-    pub fn heat_capacity_ptr(&self) -> *const f32 {
-        self.heat_capacity.as_ptr()
-    }
-    pub fn acceptance_rate_ptr(&self) -> *const f32 {
-        self.acceptance_rate.as_ptr()
-    }
-    /// this function is not safe before calling `do_data_analysis`
-    pub fn entropy_ptr(&self) -> *const f32 {
-        self.entropy.as_ptr()
-    }
-    /// this function is not safe before calling `do_data_analysis`
-    pub fn free_energy_ptr(&self) -> *const f32 {
-        self.free_energy.as_ptr()
     }
 }
 
@@ -194,7 +201,7 @@ impl ModelResults {
             writeln!(buf, "        \"temperature\": {},", temp)?;
 
             writeln!(buf, "        \"distribution\": {{")?;
-            for (size, count) in distr.as_map().iter() {
+            for (size, count) in distr.ref_map().iter() {
                 writeln!(
                     buf,
                     "          \"{}\": {},",
@@ -219,7 +226,7 @@ impl ModelResults {
             writeln!(buf, "        \"temperature\": {},", temp)?;
 
             writeln!(buf, "        \"distribution\": {{")?;
-            for (size, count) in distr.as_map().iter() {
+            for (size, count) in distr.ref_map().iter() {
                 writeln!(
                     buf,
                     "          \"{}\": {},",
@@ -242,11 +249,11 @@ impl ModelResults {
 }
 
 macro_rules! makemodel {
-    ($name:ident, $size:literal) => {
+    ($name:ident, $size:literal, $pow:literal) => {
         #[wasm_bindgen]
         pub struct $name {
-            system: System<Array2d<Atom, $size, $size>, [f32; 4]>,
-            method: fn(&mut System<Array2d<Atom, $size, $size>, [f32; 4]>, f32) -> bool,
+            system: System<FastArray<Atom, $size, $pow>, [f32; 4]>,
+            method: fn(&mut System<FastArray<Atom, $size, $pow>, [f32; 4]>, f32) -> bool,
             encoder: gif::Encoder<Vec<u8>>,
             results: ModelResults,
             zip_data: Option<Vec<u8>>,
@@ -348,25 +355,55 @@ macro_rules! makemodel {
                 self.results.len() as u32
             }
 
-            pub fn int_energy_ptr(&self) -> *const f32 {
-                self.results.int_energy_ptr()
-            }
             pub fn temp_ptr(&self) -> *const f32 {
-                self.results.temp_ptr()
+                self.results.temp.as_ptr()
+            }
+            pub fn int_energy_ptr(&self) -> *const f32 {
+                self.results.int_energy.as_ptr()
             }
             pub fn heat_capacity_ptr(&self) -> *const f32 {
-                self.results.heat_capacity_ptr()
+                self.results.heat_capacity.as_ptr()
             }
             pub fn acceptance_rate_ptr(&self) -> *const f32 {
-                self.results.acceptance_rate_ptr()
+                self.results.acceptance_rate.as_ptr()
             }
-            /// this function is not safe before calling `do_data_analysis`
             pub fn entropy_ptr(&self) -> *const f32 {
-                self.results.entropy_ptr()
+                self.results.entropy.as_ptr()
             }
-            /// this function is not safe before calling `do_data_analysis`
             pub fn free_energy_ptr(&self) -> *const f32 {
-                self.results.free_energy_ptr()
+                self.results.free_energy.as_ptr()
+            }
+
+            pub fn cs_0_min_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_0[0].as_ptr()
+            }
+            pub fn cs_0_q1_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_0[1].as_ptr()
+            }
+            pub fn cs_0_mean_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_0[2].as_ptr()
+            }
+            pub fn cs_0_q3_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_0[3].as_ptr()
+            }
+            pub fn cs_0_max_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_0[4].as_ptr()
+            }
+
+            pub fn cs_1_min_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_1[0].as_ptr()
+            }
+            pub fn cs_1_q1_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_1[1].as_ptr()
+            }
+            pub fn cs_1_mean_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_1[2].as_ptr()
+            }
+            pub fn cs_1_q3_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_1[3].as_ptr()
+            }
+            pub fn cs_1_max_ptr(&self) -> *const u32 {
+                self.results.cluster_stats_1[4].as_ptr()
             }
         }
 
@@ -487,8 +524,8 @@ macro_rules! makemodel {
     };
 }
 
-makemodel!(XSmallModel, 16);
-makemodel!(SmallModel, 32);
-makemodel!(MediumModel, 64);
-makemodel!(BigModel, 128);
-makemodel!(XBigModel, 256);
+makemodel!(XSmallModel, 16, 4);
+makemodel!(SmallModel, 32, 5);
+makemodel!(MediumModel, 64, 6);
+makemodel!(BigModel, 128, 7);
+makemodel!(XBigModel, 256, 8);
