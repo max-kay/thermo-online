@@ -10,6 +10,7 @@
   "license": "(MIT OR Apache-2.0)",
   "dependencies": {
     "gsap": "^3.12.1",
+    "plotly.js-dist-min": "^2.29.1",
     "thermo-online": "file:../pkg"
   },
   "devDependencies": {
