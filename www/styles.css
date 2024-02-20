@@ -5,7 +5,7 @@ body {
 }
 
 body {
-    background-color: #333;
+    background-color: #333333;
     color: #fff;
     font-family: Arial, sans-serif;
     line-height: 1.5;
@@ -186,4 +186,11 @@ button:disabled {
     width: 30px;
     margin-right: 5px;
     margin-left: 0;
+}
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
 }

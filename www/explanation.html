@@ -6,6 +6,19 @@
     <link rel="icon" href="icon.webp">
     <link rel="stylesheet" type="text/css" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
+        crossorigin="anonymous"></script>
+
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
     <title>Thermodynamic Model</title>
 </head>
 
@@ -13,16 +26,57 @@
     <div class="boxed">
         <h1> Thermodynamic Model </h1>
         <i>Work in progress</i>
-        <h2> Hamiltonian </h2>
-        For this model a nearest neighbor approximation was used.
-        The Hamiltonian of the system is calculated by summing all nearest neighbors interactions.
-        Where A↔A, A↔B and B↔B refers to the interaction energy between these atoms.
-        <h2> States </h2>
-        The grid of atoms is represented as a 2d array at each position there is a either an atom A or an atom B. If
-        <i>Move Vacancy</i> is chosen there is a single vacancy present in the grid.
-        <h2> Changing the State</h2>
+        <h2> Monte Carlo in a nutshell</h2>
+        Let \(\cal{H}(\sigma)\) be the Hamiltonian of the state \(\sigma\).<br>
+        From statistical mechanics we know that in equilibrium at some temperature \(T\) the distribution follows the
+        following distribution:
+        <div id="block-math">
+            \[\rho ( \sigma) = \frac{\exp(-\frac{\cal{H}(\sigma)}{k_b T})}{Z}\]
+        </div>
+        where \(Z\) is the partition function given by:
+        <div id="block-math">
+            \[Z = \sum \exp(-\frac{\cal{H}(\sigma)}{k_b T})\]
+        </div>
+        The partition function is complicated to solve analytically and for large systems it is too computationally
+        expensive to run through all states to calculate it directly.
+        The Monte Carlo method provides a way to generate the probability distribution state by state allowing
+        macroscopic thermodynamic variables to be calculated.
 
-        <h2>Block Size Statistics</h2>
+        For this we start with some initial state which is then updated by the following process:
+        <ol>
+            <li> Start with some initial state for this step. </li>
+            <li> Make a small change to the state. </li>
+            <li> Compare the Hamiltonians of the states.
+                <ol type="a">
+                    <li>If the Hamiltonian is lower in the new state the new state is accepted.</li>
+                    <li>If the Hamiltonian is higher the new state is accepted with probability \(p=\exp(-\frac{\Delta
+                        \cal{H}}{k_b T})\)</li>
+                </ol>
+            </li>
+        </ol>
+        <img src="mc_diagram.svg" alt="graphic explaining a Monte Carlo step" class="center">
+
+        <h2> This Model </h2>
+        To implement a Monte Carlo simulation for a system we need to describe three things about the system.
+        <h3> States </h3>
+        For this model the state of the system is described by a two-dimensional array at each position there is a
+        either an atom A or an atom B. Periodic boundary conditions apply. If <i>Move Vacancy</i> is chosen additionally
+        there is a single vacancy present in the grid.
+
+        <h3> Hamiltonian </h3>
+        For the Hamiltonian of this model a nearest neighbor approximation is used.
+        It is calculated by summing all nearest neighbors interactions.
+        Where A↔A, A↔B and B↔B refer to the interaction energy between these atoms.
+
+        <h3> Changing the State</h3>
+        <h4> Swap </h4>
+        The swap method is a very simple way to change the state of the system. Two positions in the grid with different
+        entries are chosen and then swapped.
+        <h4> Move Vacancy</h4>
+        For this method of changing the state a neighbor to the vacancy is chosen and then exchanged with the vacancy
+
+
+        <h3>Notes on the Block Size Statistics</h3>
     </div>
 </body>
 
