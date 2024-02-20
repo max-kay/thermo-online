@@ -30,7 +30,7 @@ jobs:
           npm run build
           cp dist/index.html ../
           cp dist/explanation.html ../
-          cp dist/mc_drawing.svg ../
+          cp dist/mc_diagram.svg ../
 
       - name: Push to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
