@@ -56,8 +56,8 @@
                 <div class="col">
                     <label for="modelSize">Model Size:</label>
                     <select id="modelSize">
-                        <option value=16 selected>16</option>
-                        <option value=32>32</option>
+                        <option value=16>16</option>
+                        <option value=32 selected>32</option>
                         <option value=64>64</option>
                         <option value=128>128</option>
                         <option value=256>256</option>
@@ -97,20 +97,19 @@
                 </div>
                 <div class="col">
                     <label for="tempSteps">Temperature Steps:</label>
-                    <input type="number" id="tempSteps" value="40"><br>
+                    <input type="number" id="tempSteps" value="50"><br>
 
                     <label for="startTemp">Start Temperature:</label>
                     <input type="number" id="startTemp" value="1.5"><br>
 
                     <label for="endTemp">End Temperature:</label>
-                    <input type="number" id="endTemp" value="0.1"><br>
+                    <input type="number" id="endTemp" value="0.01"><br>
 
                     <label for="eSteps">Steps for Equilibration [pL]:</label>
-                    <input type="number" id="eSteps" value="200"><br>
-                    <!-- change default values TODO -->
+                    <input type="number" id="eSteps" value="1000"><br>
 
                     <label for="mSteps">Steps for Measurement [pL]:</label>
-                    <input type="number" id="mSteps" value="200"><br>
+                    <input type="number" id="mSteps" value="1000"><br>
                 </div>
             </div>
             <div id="spacer"></div>
