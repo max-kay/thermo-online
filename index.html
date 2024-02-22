@@ -30,15 +30,14 @@
                 </li>
             </ul>
             <p>
-                This model conducts a simple quenching simulation from the <i>Start Temperature</i> to 0.
+                This model conducts a simple quenching simulation by exponential decay from the <i>Start Temperature</i> to <i>End Temperature</i>.
                 The <i>Temperature Steps</i> parameter determines the number of steps for this cooling process.
             </p>
             <p>
-                The parameter <i>Steps for Equilibrium</i> specifies the number of steps the model runs at each
+                The parameter <i>Steps for Equilibration</i> specifies the number of steps the model runs at each
                 temperature before
                 any measurement is made. The parameter <i>Steps for Measurement</i> determines the number of steps over
-                which
-                measurements are taken.
+                which measurements are taken.
             </p>
             <p>Some values are given per lattice site. (denoted [pL])</p>
             <br>
@@ -103,7 +102,10 @@
                     <label for="startTemp">Start Temperature:</label>
                     <input type="number" id="startTemp" value="1.5"><br>
 
-                    <label for="eSteps">Steps for Equilibrium [pL]:</label>
+                    <label for="endTemp">End Temperature:</label>
+                    <input type="number" id="endTemp" value="0.1"><br>
+
+                    <label for="eSteps">Steps for Equilibration [pL]:</label>
                     <input type="number" id="eSteps" value="200"><br>
                     <!-- change default values TODO -->
 
