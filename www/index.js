@@ -6,7 +6,7 @@ import Plotly from "plotly.js-dist-min";
 
 const GIF_DURATION = 10.0;
 
-let distrPerTemp = 100;
+let distrPerTemp = 1000;
 let tempSteps;
 let startTemp;
 let endTemp
@@ -84,18 +84,17 @@ function runSimulation() {
     nFrames = Math.max(Math.round(GIF_DURATION / tempSteps / 0.1), 1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
     modelInstance = ModelType.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100), distrPerTemp);
-    let a = (Math.log(endTemp)-Math.log(startTemp))/(tempSteps - 1);
+    let a = (Math.log(endTemp) - Math.log(startTemp)) / (tempSteps - 1);
     function animateSimulation(i) {
         if (i < tempSteps) {
-            const temp = startTemp * Math.exp(a*i);
-            console.log(temp)
+            const temp = startTemp * Math.exp(a * i);
             modelInstance.run_at_temp(eSteps, mSteps, temp, nFrames, distrPerTemp);
             gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
             i++;
             requestAnimationFrame(() => animateSimulation(i));
         } else {
             modelInstance.do_data_analysis();
-            console.log("simulation done")
+            console.log("simulation done in " + (performance.now() - start) / 1000 + "s")
             setUiOutput();
             setGif();
             setTimeout(() => {
@@ -104,6 +103,7 @@ function runSimulation() {
             }, 100)
         }
     }
+    let start = performance.now()
     console.log("simulation started")
     animateSimulation(0)
 }
@@ -216,7 +216,7 @@ function makePlots() {
 
 function makeBlockPlots() {
     const temp = new Float32Array(memory.buffer, modelInstance.temp_ptr(), modelInstance.log_len());
-    
+
     var config = { responsive: true }
     let layout = {
         xaxis: {
@@ -358,7 +358,7 @@ function makeBlockPlots() {
         y: new Uint32Array(memory.buffer, modelInstance.cs_1_min_ptr(), modelInstance.log_len()),
         xaxis: "x2",
         yaxis: "y2",
-        name:"minimum",
+        name: "minimum",
         line: {
             color: T_COLOR
         }
@@ -408,7 +408,7 @@ function makeBlockPlots() {
 }
 
 function getZip() {
-    modelInstance.make_zip(method, tempSteps, startTemp, eSteps, mSteps);
+    modelInstance.make_zip(method, tempSteps, startTemp, endTemp, eSteps, mSteps);
     const zipData = new Uint8Array(memory.buffer, modelInstance.get_zip_ptr(), modelInstance.get_zip_len());
     const blob = new Blob([zipData], { type: 'applications/zip' });
     const url = URL.createObjectURL(blob);

@@ -405,6 +405,7 @@ macro_rules! makemodel {
                 method: &str,
                 temp_steps: u32,
                 start_temp: f32,
+                end_temp: f32,
                 e_steps: u32,
                 m_steps: u32,
             ) {
@@ -431,7 +432,7 @@ macro_rules! makemodel {
                 zip.start_file("model_params.txt", options)
                     .expect("error creating zip");
                 zip.write_all(
-                    &self.make_model_params(method, temp_steps, start_temp, e_steps, m_steps),
+                    &self.make_model_params(method, temp_steps, start_temp, end_temp, e_steps, m_steps),
                 )
                 .expect("error creating zip");
 
@@ -453,6 +454,7 @@ macro_rules! makemodel {
                 method: &str,
                 temp_steps: u32,
                 start_temp: f32,
+                end_temp: f32,
                 e_steps: u32,
                 m_steps: u32,
             ) -> Vec<u8> {
@@ -469,7 +471,7 @@ macro_rules! makemodel {
                 .expect("error creating model parms file");
                 writeln!(buf, "Temperature Steps: {}", temp_steps)
                     .expect("error creating model parms file");
-                writeln!(buf, "Start Temperature: {}", start_temp)
+                writeln!(buf, "Start Temperature: {}, End Temperature: {}", start_temp, end_temp)
                     .expect("error creating model parms file");
                 writeln!(buf, "Steps for Equilibrium: {}", e_steps)
                     .expect("error creating model parms file");
