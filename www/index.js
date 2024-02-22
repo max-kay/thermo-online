@@ -9,6 +9,7 @@ const GIF_DURATION = 10.0;
 let distrPerTemp = 100;
 let tempSteps;
 let startTemp;
+let endTemp
 let eSteps;
 let mSteps;
 let nFrames;
@@ -29,8 +30,10 @@ function readInputs() {
     method = document.getElementById('method').value;
     tempSteps = parseInt(document.getElementById('tempSteps').value);
     startTemp = parseFloat(document.getElementById('startTemp').value);
+    endTemp = parseFloat(document.getElementById('endTemp').value);
     eSteps = parseInt(document.getElementById('eSteps').value);
     mSteps = parseInt(document.getElementById('mSteps').value);
+
     energies = make_energies(
         parseFloat(document.getElementById("j00").value),
         parseFloat(document.getElementById("j01").value),
@@ -78,13 +81,14 @@ function runSimulation() {
     modelInstance = undefined;
     readInputs();
     setUiRunning();
-    nFrames = Math.round(GIF_DURATION / tempSteps / 0.1); // for around 10fps
+    nFrames = Math.max(Math.round(GIF_DURATION / tempSteps / 0.1), 1); // for around 10fps
     let sPerFrame = GIF_DURATION / tempSteps / nFrames;
     modelInstance = ModelType.new(energies, cA, cB, method, tempSteps, Math.round(sPerFrame * 100), distrPerTemp);
-
+    let a = (Math.log(endTemp)-Math.log(startTemp))/(tempSteps - 1);
     function animateSimulation(i) {
         if (i < tempSteps) {
-            const temp = startTemp * ((tempSteps - 1 - i) / (tempSteps - 1));
+            const temp = startTemp * Math.exp(a*i);
+            console.log(temp)
             modelInstance.run_at_temp(eSteps, mSteps, temp, nFrames, distrPerTemp);
             gsap.to("#progress", { duration: 0, width: (i / (tempSteps - 1)) * 100 + "%" });
             i++;

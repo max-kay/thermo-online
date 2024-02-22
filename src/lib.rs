@@ -95,15 +95,6 @@ impl ModelResults {
                 .map(ClusterStats::from_map_atom)
                 .collect(),
         );
-        for list in self.cluster_stats_0[0]
-            .iter()
-            .zip(self.cluster_stats_0[1].iter())
-            .zip(self.cluster_stats_0[2].iter())
-            .zip(self.cluster_stats_0[3].iter())
-            .zip(self.cluster_stats_0[4].iter())
-        {
-            console!("{:?}", list);
-        }
         self.cluster_stats_1 = disentangle(
             self.distr_1
                 .iter()
